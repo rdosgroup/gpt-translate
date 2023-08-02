@@ -1,0 +1,28 @@
+{
+    "name": "rdosgroup/gpt-translate",
+    "description": "A Laravel package to translate any json lang file to any language you want",
+    "type": "laravel-package",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Rdosgroup\\GptTranslate\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Ricardo Guerrero",
+            "email": "richygc@icloud.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    },
+    "require": {
+        "php": "^8.0",
+        "openai-php/laravel": "^0.6.3"
+    }
+}
