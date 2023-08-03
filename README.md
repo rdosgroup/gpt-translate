@@ -17,7 +17,7 @@ Add the following to your `config/app.php` file:
 ```php
 'providers' => [
     ...
-    Rdosgroup\GptTranslate\GptTranslateServiceProvider::class,
+    Rdosgroup\GptTranslate\TranslateProvider::class,
     ...
 ],
 ```
