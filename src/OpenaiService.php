@@ -54,7 +54,7 @@ class OpenaiService
             // if the result is not empty, return the translated string
             if ($result->choices && count($result->choices) > 0 && $result->choices[0]->message) {
                 $translation = $result->choices[0]->message->content ?? $string;
-                return sync_vars($string, $translation);
+                return $this->sync_vars($string, $translation);
 
             } else {
                 return $string;
@@ -77,6 +77,9 @@ class OpenaiService
     {
         $str_origin = "english";
         switch ($origin) {
+            case 'en':
+                $str_origin = "english";
+                break;
             case 'es':
                 $str_origin = "spanish";
                 break;
@@ -98,6 +101,9 @@ class OpenaiService
         }
         $str_lang = "english";
         switch ($lang) {
+            case 'en':
+                $str_origin = "english";
+                break;
             case 'es':
                 $str_lang = "spanish";
                 break;
