@@ -106,7 +106,6 @@ class FileService
         return $matches;
     }
 
-
     /**
      * List all files php, vue, js, ts in app and resources directories
      */
