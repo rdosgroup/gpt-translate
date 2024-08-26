@@ -13,7 +13,8 @@ class TranslateMake extends Command
      *
      * @var string
      */
-    protected $signature = 'translate:make {--lang=}';
+    protected $signature = 'translate:make {--lang=} {--path=}';
+
 
     /**
      * The console command description.
@@ -30,9 +31,13 @@ class TranslateMake extends Command
     public function handle()
     {
         try {
+             $lang = $this->option('lang') ?? "en";
+            $path = $this->option('path') ?? resource_path('lang');
+            
             $service = new FileService();
-            $service->strings_file($this->option('lang') ?? "en", base_path("lang"));
-            $this->info("File created successfully");
+            $service->strings_file($lang, $path);
+        
+        $this->info("File created successfully in {$path}/{$lang}.json");
         } catch (\Throwable $th) {
             $this->error($th->getMessage());
         }
