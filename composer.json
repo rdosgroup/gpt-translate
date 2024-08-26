@@ -2,7 +2,7 @@
   "name": "edeoliv/gpt-translate",
   "description": "A Laravel package to create a base translation file, and translate it to any language with ChatGPT API",
   "type": "laravel-package",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "license": "MIT",
   "autoload": {
     "psr-4": {
