@@ -18,7 +18,9 @@ class OpenaiService
             $translated_strings[$string] = $this->translate_string($string, $origin, $lang, $context, $model);
         }
         // encode translated strings into json
-        $json = json_encode($translated_strings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        //$json = json_encode($translated_strings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        //$json = json_encode($translated_strings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);       
+
         // define file path
         $file = $path . "/$lang.json";
         // if file path does not exist, create it
@@ -36,7 +38,7 @@ class OpenaiService
             $old_strings = json_decode(file_get_contents($file), true);
             $new_strings = array_diff($translated_strings, $old_strings);
             $translated_strings = array_merge($old_strings, $new_strings);
-            $json = json_encode($translated_strings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            $json = json_encode($translated_strings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         }
         // save file
         return file_put_contents($file, $json);
@@ -49,6 +51,7 @@ class OpenaiService
                 $excludeText = "IMPORTANT: Never translate the following words or phrases: '" . implode("', '", $exclude) . "'. These should always remain in their original form.";
                 $context .= "\n\n" . $excludeText;
             }
+            $context .= "\nPlease ensure that the case (upper/lower), spaces, and special characters remain unchanged during the translation.";
             $result = OpenAI::chat()->create([
                 "model" => $model,
                 "messages" => [
@@ -63,7 +66,6 @@ class OpenaiService
             if ($result->choices && count($result->choices) > 0 && $result->choices[0]->message) {
                 $translation = $result->choices[0]->message->content ?? $string;
                 return $this->sync_vars($string, $translation);
-
             } else {
                 return $string;
             }
@@ -141,7 +143,8 @@ class OpenaiService
         if ($matches && isset($matches[0])) {
             // for each variable with subfix : found in str1, replace it with the same variable in str2
             foreach ($matches[0] as $match) {
-                $str2 = preg_replace('/' . $match . '/', $match, $str2, 1);
+                //$str2 = preg_replace('/' . $match . '/', $match, $str2, 1);
+                $str2 = preg_replace('/' . preg_quote($match, '/') . '/', $match, $str2, 1);
             }
         }
         // return new string with replaced variables
