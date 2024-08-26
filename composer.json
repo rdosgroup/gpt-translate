@@ -1,20 +1,20 @@
 {
-  "name": "rdosgroup/gpt-translate",
+  "name": "edeoliv/gpt-translate",
   "description": "A Laravel package to create a base translation file, and translate it to any language with ChatGPT API",
   "type": "laravel-package",
   "license": "MIT",
   "autoload": {
     "psr-4": {
-      "Rdosgroup\\GptTranslate\\": "src/"
+      "Edeoliv\\GptTranslate\\": "src/"
     }
   },
   "authors": [
     {
-      "name": "Ricardo Guerrero",
-      "email": "richygc@icloud.com"
+      "name": "Elias Olivtradet",
+      "email": "deoliveira.elias.eus@gmail.com"
     }
   ],
-  "minimum-stability": "dev",
+  "minimum-stability": "stable",
   "prefer-stable": true,
   "config": {
     "allow-plugins": {
@@ -22,7 +22,7 @@
     }
   },
   "require": {
-    "php": "^8.0",
-    "openai-php/laravel": "^0.6.3"
+    "php": "^8.3",
+    "openai-php/laravel": "^0.10.1"
   }
 }

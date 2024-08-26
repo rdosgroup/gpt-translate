@@ -24,8 +24,15 @@ trait InteractsWithDatabase
      * @param  string|null  $connection
      * @return $this
      */
-    protected function assertDatabaseHas($table, array $data, $connection = null)
+    protected function assertDatabaseHas($table, array $data = [], $connection = null)
     {
+        if ($table instanceof Model) {
+            $data = [
+                $table->getKeyName() => $table->getKey(),
+                ...$data,
+            ];
+        }
+
         $this->assertThat(
             $this->getTable($table), new HasInDatabase($this->getConnection($connection, $table), $data)
         );
@@ -41,8 +48,15 @@ trait InteractsWithDatabase
      * @param  string|null  $connection
      * @return $this
      */
-    protected function assertDatabaseMissing($table, array $data, $connection = null)
+    protected function assertDatabaseMissing($table, array $data = [], $connection = null)
     {
+        if ($table instanceof Model) {
+            $data = [
+                $table->getKeyName() => $table->getKey(),
+                ...$data,
+            ];
+        }
+
         $constraint = new ReverseConstraint(
             new HasInDatabase($this->getConnection($connection, $table), $data)
         );
@@ -106,7 +120,12 @@ trait InteractsWithDatabase
         }
 
         $this->assertThat(
-            $this->getTable($table), new SoftDeletedInDatabase($this->getConnection($connection, $table), $data, $deletedAtColumn)
+            $this->getTable($table),
+            new SoftDeletedInDatabase(
+                $this->getConnection($connection, $table),
+                $data,
+                $this->getDeletedAtColumn($table, $deletedAtColumn)
+            )
         );
 
         return $this;
@@ -133,7 +152,12 @@ trait InteractsWithDatabase
         }
 
         $this->assertThat(
-            $this->getTable($table), new NotSoftDeletedInDatabase($this->getConnection($connection, $table), $data, $deletedAtColumn)
+            $this->getTable($table),
+            new NotSoftDeletedInDatabase(
+                $this->getConnection($connection, $table),
+                $data,
+                $this->getDeletedAtColumn($table, $deletedAtColumn)
+            )
         );
 
         return $this;
@@ -147,11 +171,7 @@ trait InteractsWithDatabase
      */
     protected function assertModelExists($model)
     {
-        return $this->assertDatabaseHas(
-            $model->getTable(),
-            [$model->getKeyName() => $model->getKey()],
-            $model->getConnectionName()
-        );
+        return $this->assertDatabaseHas($model);
     }
 
     /**
@@ -162,11 +182,7 @@ trait InteractsWithDatabase
      */
     protected function assertModelMissing($model)
     {
-        return $this->assertDatabaseMissing(
-            $model->getTable(),
-            [$model->getKeyName() => $model->getKey()],
-            $model->getConnectionName()
-        );
+        return $this->assertDatabaseMissing($model);
     }
 
     /**
@@ -189,8 +205,8 @@ trait InteractsWithDatabase
 
             $this->beforeApplicationDestroyed(function () use (&$actual, $expected, $connectionInstance) {
                 $this->assertSame(
-                    $actual,
                     $expected,
+                    $actual,
                     "Expected {$expected} database queries on the [{$connectionInstance->getName()}] connection. {$actual} occurred."
                 );
             });
@@ -268,6 +284,18 @@ trait InteractsWithDatabase
     protected function getTableConnection($table)
     {
         return $this->newModelFor($table)?->getConnectionName();
+    }
+
+    /**
+     * Get the table column name used for soft deletes.
+     *
+     * @param  string  $table
+     * @param  string  $defaultColumnName
+     * @return string
+     */
+    protected function getDeletedAtColumn($table, $defaultColumnName = 'deleted_at')
+    {
+        return $this->newModelFor($table)?->getDeletedAtColumn() ?: $defaultColumnName;
     }
 
     /**

@@ -3,7 +3,7 @@
 namespace OpenAI\Testing\Resources\Concerns;
 
 use OpenAI\Contracts\ResponseContract;
-use OpenAI\Responses\StreamResponse;
+use OpenAI\Contracts\ResponseStreamContract;
 use OpenAI\Testing\ClientFake;
 use OpenAI\Testing\Requests\TestRequest;
 
@@ -16,11 +16,11 @@ trait Testable
     abstract protected function resource(): string;
 
     /**
-     * @param  array<string, mixed>|string|null  $parameters
+     * @param  array<string, mixed>  $args
      */
-    protected function record(string $method, array|string|null $parameters = null): ResponseContract|StreamResponse|string
+    protected function record(string $method, array $args = []): ResponseContract|ResponseStreamContract|string
     {
-        return $this->fake->record(new TestRequest($this->resource(), $method, $parameters));
+        return $this->fake->record(new TestRequest($this->resource(), $method, $args));
     }
 
     public function assertSent(callable|int|null $callback = null): void

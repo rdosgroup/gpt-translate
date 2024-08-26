@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SetCacheHeaders
 {
@@ -22,7 +23,14 @@ class SetCacheHeaders
         }
 
         return collect($options)
-            ->map(fn ($value, $key) => is_int($key) ? $value : "{$key}={$value}")
+            ->map(function ($value, $key) {
+                if (is_bool($value)) {
+                    return $value ? $key : null;
+                }
+
+                return is_int($key) ? $value : "{$key}={$value}";
+            })
+            ->filter()
             ->map(fn ($value) => Str::finish($value, ';'))
             ->pipe(fn ($options) => rtrim(static::class.':'.$options->implode(''), ';'));
     }
@@ -41,12 +49,16 @@ class SetCacheHeaders
     {
         $response = $next($request);
 
-        if (! $request->isMethodCacheable() || (! $response->getContent() && ! $response instanceof BinaryFileResponse)) {
+        if (! $request->isMethodCacheable() || (! $response->getContent() && ! $response instanceof BinaryFileResponse && ! $response instanceof StreamedResponse)) {
             return $response;
         }
 
         if (is_string($options)) {
             $options = $this->parseOptions($options);
+        }
+
+        if (! $response->isSuccessful()) {
+            return $response;
         }
 
         if (isset($options['etag']) && $options['etag'] === true) {
@@ -55,7 +67,7 @@ class SetCacheHeaders
 
         if (isset($options['last_modified'])) {
             if (is_numeric($options['last_modified'])) {
-                $options['last_modified'] = Carbon::createFromTimestamp($options['last_modified']);
+                $options['last_modified'] = Carbon::createFromTimestamp($options['last_modified'], date_default_timezone_get());
             } else {
                 $options['last_modified'] = Carbon::parse($options['last_modified']);
             }

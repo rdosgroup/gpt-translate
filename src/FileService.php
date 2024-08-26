@@ -1,6 +1,6 @@
 <?php
 
-namespace Rdosgroup\GptTranslate;
+namespace Edeoliv\GptTranslate;
 
 class FileService
 {

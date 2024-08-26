@@ -1,12 +1,12 @@
 <?php
 
-namespace Rdosgroup\GptTranslate;
+namespace Edeoliv\GptTranslate;
 
 use OpenAI\Laravel\Facades\OpenAI;
 
 class OpenaiService
 {
-    public function translate_file($path = '.', $origin = 'en', $lang = 'es', $context = '', $model = "gpt-3.5-turbo")
+    public function translate_file($path = '.', $origin = 'en', $lang = 'es', $context = '', $model = "gpt-3.5-turbo",$exclude = [])
     {
         // get file from original content
         $file_origin = $path . "/$origin.json";
@@ -42,12 +42,20 @@ class OpenaiService
         return file_put_contents($file, $json);
     }
 
-    public function translate_string($string = '', $origin = 'en', $lang = 'es', $context = '', $model = "gpt-3.5-turbo")
+    public function translate_string($string = '', $origin = 'en', $lang = 'es', $context = '', $model = "gpt-3.5-turbo", $exclude = [])
     {
         try {
+            if (!empty($exclude)) {
+                $excludeText = "IMPORTANT: Never translate the following words or phrases: '" . implode("', '", $exclude) . "'. These should always remain in their original form.";
+                $context .= "\n\n" . $excludeText;
+            }
             $result = OpenAI::chat()->create([
                 "model" => $model,
-                "messages" => [["role" => "system", "content" => $this->prompt_system($context)], ["role" => "user", "content" => $this->prompt_header($origin, $lang)], ["role" => "user", "content" => $string]],
+                "messages" => [
+                    ["role" => "system", "content" => $this->prompt_system($context)],
+                    ["role" => "user", "content" => $this->prompt_header($origin, $lang)],
+                    ["role" => "user", "content" => $string]
+                ],
                 "temperature" => 0.4,
                 "n" => 1,
             ]);

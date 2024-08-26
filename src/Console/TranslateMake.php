@@ -1,10 +1,10 @@
 <?php
 
-namespace Rdosgroup\GptTranslate\Console;
+namespace Edeoliv\GptTranslate\Console;
 
 
 use Illuminate\Console\Command;
-use Rdosgroup\GptTranslate\FileService;
+use Edeoliv\GptTranslate\FileService;
 
 class TranslateMake extends Command
 {

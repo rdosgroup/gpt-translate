@@ -12,7 +12,6 @@ use Illuminate\Support\Traits\Macroable;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Exception\SessionNotFoundException;
 use Symfony\Component\HttpFoundation\InputBag;
-use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
@@ -32,7 +31,7 @@ class Request extends SymfonyRequest implements Arrayable, ArrayAccess
     /**
      * The decoded JSON content for the request.
      *
-     * @var \Symfony\Component\HttpFoundation\ParameterBag|null
+     * @var \Symfony\Component\HttpFoundation\InputBag|null
      */
     protected $json;
 
@@ -298,7 +297,8 @@ class Request extends SymfonyRequest implements Arrayable, ArrayAccess
     public function prefetch()
     {
         return strcasecmp($this->server->get('HTTP_X_MOZ') ?? '', 'prefetch') === 0 ||
-               strcasecmp($this->headers->get('Purpose') ?? '', 'prefetch') === 0;
+               strcasecmp($this->headers->get('Purpose') ?? '', 'prefetch') === 0 ||
+               strcasecmp($this->headers->get('Sec-Purpose') ?? '', 'prefetch') === 0;
     }
 
     /**
@@ -368,7 +368,7 @@ class Request extends SymfonyRequest implements Arrayable, ArrayAccess
     }
 
     /**
-     * Replace the input for the current request.
+     * Replace the input values for the current request.
      *
      * @param  array  $input
      * @return $this
@@ -389,6 +389,7 @@ class Request extends SymfonyRequest implements Arrayable, ArrayAccess
      * @param  mixed  $default
      * @return mixed
      */
+    #[\Override]
     public function get(string $key, mixed $default = null): mixed
     {
         return parent::get($key, $default);
@@ -399,12 +400,12 @@ class Request extends SymfonyRequest implements Arrayable, ArrayAccess
      *
      * @param  string|null  $key
      * @param  mixed  $default
-     * @return \Symfony\Component\HttpFoundation\ParameterBag|mixed
+     * @return \Symfony\Component\HttpFoundation\InputBag|mixed
      */
     public function json($key = null, $default = null)
     {
         if (! isset($this->json)) {
-            $this->json = new ParameterBag((array) json_decode($this->getContent(), true));
+            $this->json = new InputBag((array) json_decode($this->getContent() ?: '[]', true));
         }
 
         if (is_null($key)) {
@@ -417,7 +418,7 @@ class Request extends SymfonyRequest implements Arrayable, ArrayAccess
     /**
      * Get the input source for the request.
      *
-     * @return \Symfony\Component\HttpFoundation\ParameterBag
+     * @return \Symfony\Component\HttpFoundation\InputBag
      */
     protected function getInputSource()
     {
@@ -478,9 +479,9 @@ class Request extends SymfonyRequest implements Arrayable, ArrayAccess
      */
     public static function createFromBase(SymfonyRequest $request)
     {
-        $newRequest = (new static)->duplicate(
+        $newRequest = new static(
             $request->query->all(), $request->request->all(), $request->attributes->all(),
-            $request->cookies->all(), $request->files->all(), $request->server->all()
+            $request->cookies->all(), (new static)->filterFiles($request->files->all()) ?? [], $request->server->all()
         );
 
         $newRequest->headers->replace($request->headers->all());
@@ -488,7 +489,7 @@ class Request extends SymfonyRequest implements Arrayable, ArrayAccess
         $newRequest->content = $request->content;
 
         if ($newRequest->isJson()) {
-            $newRequest->request = new InputBag($newRequest->json()->all());
+            $newRequest->request = $newRequest->json();
         }
 
         return $newRequest;
@@ -499,7 +500,8 @@ class Request extends SymfonyRequest implements Arrayable, ArrayAccess
      *
      * @return static
      */
-    public function duplicate(array $query = null, array $request = null, array $attributes = null, array $cookies = null, array $files = null, array $server = null): static
+    #[\Override]
+    public function duplicate(?array $query = null, ?array $request = null, ?array $attributes = null, ?array $cookies = null, ?array $files = null, ?array $server = null): static
     {
         return parent::duplicate($query, $request, $attributes, $cookies, $this->filterFiles($files), $server);
     }
@@ -532,18 +534,20 @@ class Request extends SymfonyRequest implements Arrayable, ArrayAccess
     /**
      * {@inheritdoc}
      */
+    #[\Override]
     public function hasSession(bool $skipIfUninitialized = false): bool
     {
-        return ! is_null($this->session);
+        return $this->session instanceof SymfonySessionDecorator;
     }
 
     /**
      * {@inheritdoc}
      */
+    #[\Override]
     public function getSession(): SessionInterface
     {
         return $this->hasSession()
-                    ? new SymfonySessionDecorator($this->session())
+                    ? $this->session
                     : throw new SessionNotFoundException;
     }
 
@@ -560,7 +564,7 @@ class Request extends SymfonyRequest implements Arrayable, ArrayAccess
             throw new RuntimeException('Session store not set on request.');
         }
 
-        return $this->session;
+        return $this->session->store;
     }
 
     /**
@@ -571,7 +575,7 @@ class Request extends SymfonyRequest implements Arrayable, ArrayAccess
      */
     public function setLaravelSession($session)
     {
-        $this->session = $session;
+        $this->session = new SymfonySessionDecorator($session);
     }
 
     /**
@@ -647,7 +651,7 @@ class Request extends SymfonyRequest implements Arrayable, ArrayAccess
     /**
      * Set the JSON payload for the request.
      *
-     * @param  \Symfony\Component\HttpFoundation\ParameterBag  $json
+     * @param  \Symfony\Component\HttpFoundation\InputBag  $json
      * @return $this
      */
     public function setJson($json)

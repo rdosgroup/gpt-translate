@@ -9,23 +9,26 @@ class ComposerStaticInitd425ff81b51165a3587714bd01d313a0
     public static $files = array (
         '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
-        'a4a119a56e50fbb293281d9a48007e0e' => __DIR__ . '/..' . '/symfony/polyfill-php80/bootstrap.php',
         'e69f7f6ee287b969198c3c9d6777bd38' => __DIR__ . '/..' . '/symfony/polyfill-intl-normalizer/bootstrap.php',
         '320cde22f66dd4f5d3fd621d3e88b98f' => __DIR__ . '/..' . '/symfony/polyfill-ctype/bootstrap.php',
+        '662a729f963d39afe703c9d9b7ab4a8c' => __DIR__ . '/..' . '/symfony/polyfill-php83/bootstrap.php',
         '25072dd6e2470089de65ae7bf11d3109' => __DIR__ . '/..' . '/symfony/polyfill-php72/bootstrap.php',
         'f598d06aa772fa33d905e87be6398fb1' => __DIR__ . '/..' . '/symfony/polyfill-intl-idn/bootstrap.php',
-        '662a729f963d39afe703c9d9b7ab4a8c' => __DIR__ . '/..' . '/symfony/polyfill-php83/bootstrap.php',
-        '667aeda72477189d0494fecd327c3641' => __DIR__ . '/..' . '/symfony/var-dumper/Resources/functions/dump.php',
         '8825ede83f2f289127722d4e842cf7e8' => __DIR__ . '/..' . '/symfony/polyfill-intl-grapheme/bootstrap.php',
+        'a4a119a56e50fbb293281d9a48007e0e' => __DIR__ . '/..' . '/symfony/polyfill-php80/bootstrap.php',
         'b6b991a57620e2fb6b2f66f03fe9ddc2' => __DIR__ . '/..' . '/symfony/string/Resources/functions.php',
+        '667aeda72477189d0494fecd327c3641' => __DIR__ . '/..' . '/symfony/var-dumper/Resources/functions/dump.php',
         '7b11c4dc42b3b3023073cb14e519683c' => __DIR__ . '/..' . '/ralouphie/getallheaders/src/getallheaders.php',
+        '37a3dc5111fe8f707ab4c132ef1dbc62' => __DIR__ . '/..' . '/guzzlehttp/guzzle/src/functions_include.php',
+        '2203a247e6fda86070a5e4e07aed533a' => __DIR__ . '/..' . '/symfony/clock/Resources/now.php',
         '09f6b20656683369174dd6fa83b7e5fb' => __DIR__ . '/..' . '/symfony/polyfill-uuid/bootstrap.php',
         'a1105708a18b76903365ca1c4aa61b02' => __DIR__ . '/..' . '/symfony/translation/Resources/functions.php',
+        '47e1160838b5e5a10346ac4084b58c23' => __DIR__ . '/..' . '/laravel/prompts/src/helpers.php',
         '35a6ad97d21e794e7e22a17d806652e4' => __DIR__ . '/..' . '/nunomaduro/termwind/src/Functions.php',
         'e39a8b23c42d4e1452234d762b03835a' => __DIR__ . '/..' . '/ramsey/uuid/src/functions.php',
-        '37a3dc5111fe8f707ab4c132ef1dbc62' => __DIR__ . '/..' . '/guzzlehttp/guzzle/src/functions_include.php',
         '265b4faa2b3a9766332744949e83bf97' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/Collections/helpers.php',
         'c7a3c339e7e14b60e06a2d7fcce9476b' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/Events/functions.php',
+        'f57d353b41eb2e234b26064d63d8c5dd' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/Filesystem/functions.php',
         'f0906e6318348a765ffb6eb24e0d0938' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/Foundation/helpers.php',
         '58571171fd5812e6e447dce228f52f4d' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/Support/helpers.php',
         '61ba3e92ef91a7a0f1cc260ebd9290e4' => __DIR__ . '/..' . '/openai-php/client/src/OpenAI.php',
@@ -74,10 +77,10 @@ class ComposerStaticInitd425ff81b51165a3587714bd01d313a0
             'Symfony\\Component\\ErrorHandler\\' => 31,
             'Symfony\\Component\\CssSelector\\' => 30,
             'Symfony\\Component\\Console\\' => 26,
+            'Symfony\\Component\\Clock\\' => 24,
         ),
         'R' => 
         array (
-            'Rdosgroup\\GptTranslate\\' => 23,
             'Ramsey\\Uuid\\' => 12,
             'Ramsey\\Collection\\' => 18,
         ),
@@ -89,6 +92,7 @@ class ComposerStaticInitd425ff81b51165a3587714bd01d313a0
             'Psr\\Http\\Client\\' => 16,
             'Psr\\EventDispatcher\\' => 20,
             'Psr\\Container\\' => 14,
+            'Psr\\Clock\\' => 10,
             'PhpOption\\' => 10,
         ),
         'O' => 
@@ -108,6 +112,7 @@ class ComposerStaticInitd425ff81b51165a3587714bd01d313a0
             'League\\Config\\' => 14,
             'League\\CommonMark\\' => 18,
             'Laravel\\SerializableClosure\\' => 28,
+            'Laravel\\Prompts\\' => 16,
         ),
         'I' => 
         array (
@@ -134,6 +139,7 @@ class ComposerStaticInitd425ff81b51165a3587714bd01d313a0
         'E' => 
         array (
             'Egulias\\EmailValidator\\' => 23,
+            'Edeoliv\\GptTranslate\\' => 21,
         ),
         'D' => 
         array (
@@ -145,6 +151,7 @@ class ComposerStaticInitd425ff81b51165a3587714bd01d313a0
         'C' => 
         array (
             'Cron\\' => 5,
+            'Carbon\\Doctrine\\' => 16,
             'Carbon\\' => 7,
         ),
         'B' => 
@@ -278,9 +285,9 @@ class ComposerStaticInitd425ff81b51165a3587714bd01d313a0
         array (
             0 => __DIR__ . '/..' . '/symfony/console',
         ),
-        'Rdosgroup\\GptTranslate\\' => 
+        'Symfony\\Component\\Clock\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/src',
+            0 => __DIR__ . '/..' . '/symfony/clock',
         ),
         'Ramsey\\Uuid\\' => 
         array (
@@ -300,8 +307,8 @@ class ComposerStaticInitd425ff81b51165a3587714bd01d313a0
         ),
         'Psr\\Http\\Message\\' => 
         array (
-            0 => __DIR__ . '/..' . '/psr/http-message/src',
-            1 => __DIR__ . '/..' . '/psr/http-factory/src',
+            0 => __DIR__ . '/..' . '/psr/http-factory/src',
+            1 => __DIR__ . '/..' . '/psr/http-message/src',
         ),
         'Psr\\Http\\Client\\' => 
         array (
@@ -314,6 +321,10 @@ class ComposerStaticInitd425ff81b51165a3587714bd01d313a0
         'Psr\\Container\\' => 
         array (
             0 => __DIR__ . '/..' . '/psr/container/src',
+        ),
+        'Psr\\Clock\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/clock/src',
         ),
         'PhpOption\\' => 
         array (
@@ -354,6 +365,10 @@ class ComposerStaticInitd425ff81b51165a3587714bd01d313a0
         'Laravel\\SerializableClosure\\' => 
         array (
             0 => __DIR__ . '/..' . '/laravel/serializable-closure/src',
+        ),
+        'Laravel\\Prompts\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/laravel/prompts/src',
         ),
         'Illuminate\\Support\\' => 
         array (
@@ -401,6 +416,10 @@ class ComposerStaticInitd425ff81b51165a3587714bd01d313a0
         array (
             0 => __DIR__ . '/..' . '/egulias/email-validator/src',
         ),
+        'Edeoliv\\GptTranslate\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/src',
+        ),
         'Dotenv\\' => 
         array (
             0 => __DIR__ . '/..' . '/vlucas/phpdotenv/src',
@@ -421,6 +440,10 @@ class ComposerStaticInitd425ff81b51165a3587714bd01d313a0
         array (
             0 => __DIR__ . '/..' . '/dragonmantank/cron-expression/src/Cron',
         ),
+        'Carbon\\Doctrine\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/carbonphp/carbon-doctrine-types/src/Carbon/Doctrine',
+        ),
         'Carbon\\' => 
         array (
             0 => __DIR__ . '/..' . '/nesbot/carbon/src/Carbon',
@@ -434,6 +457,15 @@ class ComposerStaticInitd425ff81b51165a3587714bd01d313a0
     public static $classMap = array (
         'Attribute' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
+        'DateError' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateError.php',
+        'DateException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateException.php',
+        'DateInvalidOperationException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateInvalidOperationException.php',
+        'DateInvalidTimeZoneException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateInvalidTimeZoneException.php',
+        'DateMalformedIntervalStringException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateMalformedIntervalStringException.php',
+        'DateMalformedPeriodStringException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateMalformedPeriodStringException.php',
+        'DateMalformedStringException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateMalformedStringException.php',
+        'DateObjectError' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateObjectError.php',
+        'DateRangeError' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateRangeError.php',
         'Nette\\ArgumentOutOfRangeException' => __DIR__ . '/..' . '/nette/utils/src/exceptions.php',
         'Nette\\DeprecatedException' => __DIR__ . '/..' . '/nette/utils/src/exceptions.php',
         'Nette\\DirectoryNotFoundException' => __DIR__ . '/..' . '/nette/utils/src/exceptions.php',
@@ -479,21 +511,26 @@ class ComposerStaticInitd425ff81b51165a3587714bd01d313a0
         'Nette\\Utils\\Html' => __DIR__ . '/..' . '/nette/utils/src/Utils/Html.php',
         'Nette\\Utils\\IHtmlString' => __DIR__ . '/..' . '/nette/utils/src/compatibility.php',
         'Nette\\Utils\\Image' => __DIR__ . '/..' . '/nette/utils/src/Utils/Image.php',
+        'Nette\\Utils\\ImageColor' => __DIR__ . '/..' . '/nette/utils/src/Utils/ImageColor.php',
         'Nette\\Utils\\ImageException' => __DIR__ . '/..' . '/nette/utils/src/Utils/exceptions.php',
         'Nette\\Utils\\ImageType' => __DIR__ . '/..' . '/nette/utils/src/Utils/ImageType.php',
+        'Nette\\Utils\\Iterables' => __DIR__ . '/..' . '/nette/utils/src/Utils/Iterables.php',
         'Nette\\Utils\\Json' => __DIR__ . '/..' . '/nette/utils/src/Utils/Json.php',
         'Nette\\Utils\\JsonException' => __DIR__ . '/..' . '/nette/utils/src/Utils/exceptions.php',
         'Nette\\Utils\\ObjectHelpers' => __DIR__ . '/..' . '/nette/utils/src/Utils/ObjectHelpers.php',
         'Nette\\Utils\\Paginator' => __DIR__ . '/..' . '/nette/utils/src/Utils/Paginator.php',
         'Nette\\Utils\\Random' => __DIR__ . '/..' . '/nette/utils/src/Utils/Random.php',
         'Nette\\Utils\\Reflection' => __DIR__ . '/..' . '/nette/utils/src/Utils/Reflection.php',
+        'Nette\\Utils\\ReflectionMethod' => __DIR__ . '/..' . '/nette/utils/src/Utils/ReflectionMethod.php',
         'Nette\\Utils\\RegexpException' => __DIR__ . '/..' . '/nette/utils/src/Utils/exceptions.php',
         'Nette\\Utils\\Strings' => __DIR__ . '/..' . '/nette/utils/src/Utils/Strings.php',
         'Nette\\Utils\\Type' => __DIR__ . '/..' . '/nette/utils/src/Utils/Type.php',
         'Nette\\Utils\\UnknownImageFileException' => __DIR__ . '/..' . '/nette/utils/src/Utils/exceptions.php',
         'Nette\\Utils\\Validators' => __DIR__ . '/..' . '/nette/utils/src/Utils/Validators.php',
         'Normalizer' => __DIR__ . '/..' . '/symfony/polyfill-intl-normalizer/Resources/stubs/Normalizer.php',
+        'Override' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/Override.php',
         'PhpToken' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/PhpToken.php',
+        'SQLite3Exception' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/SQLite3Exception.php',
         'Stringable' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Stringable.php',
         'UnhandledMatchError' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/UnhandledMatchError.php',
         'ValueError' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/ValueError.php',

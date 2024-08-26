@@ -117,11 +117,22 @@ abstract class Connection
 
         $time = round((microtime(true) - $start) * 1000, 2);
 
-        if (isset($this->events)) {
-            $this->event(new CommandExecuted($method, $parameters, $time, $this));
-        }
+        $this->events?->dispatch(new CommandExecuted(
+            $method, $this->parseParametersForEvent($parameters), $time, $this
+        ));
 
         return $result;
+    }
+
+    /**
+     * Parse the command's parameters for event dispatching.
+     *
+     * @param  array  $parameters
+     * @return array
+     */
+    protected function parseParametersForEvent(array $parameters)
+    {
+        return $parameters;
     }
 
     /**
@@ -129,6 +140,8 @@ abstract class Connection
      *
      * @param  mixed  $event
      * @return void
+     *
+     * @deprecated since Laravel 11.x
      */
     protected function event($event)
     {
