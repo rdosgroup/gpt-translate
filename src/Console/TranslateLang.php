@@ -47,7 +47,7 @@ class TranslateLang extends Command
 
             $service = new OpenaiService();
             $service->translate_file(
-                base_path("lang"), 
+                resource_path('lang'),
                 $this->option('origin') ?? "en", 
                 $this->option('lang') ?? "es", 
                 $context, 
