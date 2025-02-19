@@ -11,17 +11,27 @@ final class ErrorException extends Exception
     /**
      * Creates a new Exception instance.
      *
-     * @param  array{message: string|array<int, string>, type: ?string, code: ?string}  $contents
+     * @param  array{message: string|array<int, string>, type: ?string, code: string|int|null}  $contents
      */
-    public function __construct(private readonly array $contents)
+    public function __construct(private readonly array $contents, private readonly int $statusCode)
     {
-        $message = ($contents['message'] ?: $this->contents['code']) ?: 'Unknown error';
+        $message = ($contents['message'] ?: (string) $this->contents['code']) ?: 'Unknown error';
 
         if (is_array($message)) {
-            $message = implode("\n", $message);
+            $message = implode(PHP_EOL, $message);
         }
 
         parent::__construct($message);
+    }
+
+    /**
+     * Returns the HTTP status code.
+     *
+     * **Note: For streamed requests it might be 200 even in case of an error.**
+     */
+    public function getStatusCode(): int
+    {
+        return $this->statusCode;
     }
 
     /**
@@ -41,9 +51,9 @@ final class ErrorException extends Exception
     }
 
     /**
-     * Returns the error type.
+     * Returns the error code.
      */
-    public function getErrorCode(): ?string
+    public function getErrorCode(): string|int|null
     {
         return $this->contents['code'];
     }

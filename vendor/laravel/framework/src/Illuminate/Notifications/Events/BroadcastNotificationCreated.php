@@ -8,6 +8,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 
 class BroadcastNotificationCreated implements ShouldBroadcast
 {
@@ -71,9 +72,9 @@ class BroadcastNotificationCreated implements ShouldBroadcast
             return [new PrivateChannel($channels)];
         }
 
-        return collect($channels)->map(function ($channel) {
-            return new PrivateChannel($channel);
-        })->all();
+        return (new Collection($channels))
+            ->map(fn ($channel) => new PrivateChannel($channel))
+            ->all();
     }
 
     /**
@@ -119,5 +120,17 @@ class BroadcastNotificationCreated implements ShouldBroadcast
         return method_exists($this->notification, 'broadcastType')
                     ? $this->notification->broadcastType()
                     : get_class($this->notification);
+    }
+
+    /**
+     * Get the event name of the notification being broadcast.
+     *
+     * @return string
+     */
+    public function broadcastAs()
+    {
+        return method_exists($this->notification, 'broadcastAs')
+                ? $this->notification->broadcastAs()
+                : __CLASS__;
     }
 }

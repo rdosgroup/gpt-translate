@@ -34,26 +34,44 @@ final class Payload
 
     /**
      * Creates a new Payload value object from the given parameters.
+     *
+     * @param  array<string, mixed>  $parameters
      */
-    public static function list(string $resource): self
+    public static function list(string $resource, array $parameters = []): self
     {
         $contentType = ContentType::JSON;
         $method = Method::GET;
         $uri = ResourceUri::list($resource);
 
-        return new self($contentType, $method, $uri);
+        return new self($contentType, $method, $uri, $parameters);
     }
 
     /**
      * Creates a new Payload value object from the given parameters.
+     *
+     * @param  array<string, mixed>  $parameters
      */
-    public static function retrieve(string $resource, string $id, string $suffix = ''): self
+    public static function retrieve(string $resource, string $id, string $suffix = '', array $parameters = []): self
     {
         $contentType = ContentType::JSON;
         $method = Method::GET;
         $uri = ResourceUri::retrieve($resource, $id, $suffix);
 
-        return new self($contentType, $method, $uri);
+        return new self($contentType, $method, $uri, $parameters);
+    }
+
+    /**
+     * Creates a new Payload value object from the given parameters.
+     *
+     * @param  array<string, mixed>  $parameters
+     */
+    public static function modify(string $resource, string $id, array $parameters = []): self
+    {
+        $contentType = ContentType::JSON;
+        $method = Method::POST;
+        $uri = ResourceUri::modify($resource, $id);
+
+        return new self($contentType, $method, $uri, $parameters);
     }
 
     /**
@@ -125,13 +143,19 @@ final class Payload
      */
     public function toRequest(BaseUri $baseUri, Headers $headers, QueryParams $queryParams): RequestInterface
     {
-        $psr17Factory = new Psr17Factory();
+        $psr17Factory = new Psr17Factory;
 
         $body = null;
 
         $uri = $baseUri->toString().$this->uri->toString();
-        if (! empty($queryParams->toArray())) {
-            $uri .= '?'.http_build_query($queryParams->toArray());
+
+        $queryParams = $queryParams->toArray();
+        if ($this->method === Method::GET) {
+            $queryParams = [...$queryParams, ...$this->parameters];
+        }
+
+        if ($queryParams !== []) {
+            $uri .= '?'.http_build_query($queryParams);
         }
 
         $headers = $headers->withContentType($this->contentType);
@@ -140,12 +164,20 @@ final class Payload
             if ($this->contentType === ContentType::MULTIPART) {
                 $streamBuilder = new MultipartStreamBuilder($psr17Factory);
 
-                /** @var array<string, StreamInterface|string|int|float|bool> $parameters */
+                /** @var array<string, StreamInterface|string|int|float|bool|array<int, string>> $parameters */
                 $parameters = $this->parameters;
 
                 foreach ($parameters as $key => $value) {
                     if (is_int($value) || is_float($value) || is_bool($value)) {
                         $value = (string) $value;
+                    }
+
+                    if (is_array($value)) {
+                        foreach ($value as $nestedValue) {
+                            $streamBuilder->addResource($key.'[]', $nestedValue);
+                        }
+
+                        continue;
                     }
 
                     $streamBuilder->addResource($key, $value);

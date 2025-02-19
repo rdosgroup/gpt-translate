@@ -306,14 +306,14 @@ trait CompilesConditionals
     }
 
     /**
-     * Compile a selected block into valid PHP.
+     * Compile a boolean value into a raw true / false value for embedding into HTML attributes or JavaScript.
      *
-     * @param  string  $condition
+     * @param  bool  $condition
      * @return string
      */
-    protected function compileSelected($condition)
+    protected function compileBool($condition)
     {
-        return "<?php if{$condition}: echo 'selected'; endif; ?>";
+        return "<?php echo ($condition ? 'true' : 'false'); ?>";
     }
 
     /**
@@ -361,6 +361,17 @@ trait CompilesConditionals
     }
 
     /**
+     * Compile a selected block into valid PHP.
+     *
+     * @param  string  $condition
+     * @return string
+     */
+    protected function compileSelected($condition)
+    {
+        return "<?php if{$condition}: echo 'selected'; endif; ?>";
+    }
+
+    /**
      * Compile the push statements into valid PHP.
      *
      * @param  string  $expression
@@ -371,6 +382,30 @@ trait CompilesConditionals
         $parts = explode(',', $this->stripParentheses($expression), 2);
 
         return "<?php if({$parts[0]}): \$__env->startPush({$parts[1]}); ?>";
+    }
+
+    /**
+     * Compile the else-if push statements into valid PHP.
+     *
+     * @param  string  $expression
+     * @return string
+     */
+    protected function compileElsePushIf($expression)
+    {
+        $parts = explode(',', $this->stripParentheses($expression), 2);
+
+        return "<?php \$__env->stopPush(); elseif({$parts[0]}): \$__env->startPush({$parts[1]}); ?>";
+    }
+
+    /**
+     * Compile the else push statements into valid PHP.
+     *
+     * @param  string  $expression
+     * @return string
+     */
+    protected function compileElsePush($expression)
+    {
+        return "<?php \$__env->stopPush(); else: \$__env->startPush{$expression}; ?>";
     }
 
     /**

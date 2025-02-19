@@ -4,7 +4,9 @@ namespace Illuminate\Foundation\Testing;
 
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Database\Schema\PostgresBuilder;
 use Illuminate\Foundation\Testing\Traits\CanConfigureMigrationCommands;
+use Illuminate\Support\Collection;
 
 trait DatabaseTruncation
 {
@@ -24,6 +26,8 @@ trait DatabaseTruncation
      */
     protected function truncateDatabaseTables(): void
     {
+        $this->beforeTruncatingDatabase();
+
         // Migrate and seed the database on first run...
         if (! RefreshDatabaseState::$migrated) {
             $this->artisan('migrate:fresh', $this->migrateFreshUsing());
@@ -45,6 +49,8 @@ trait DatabaseTruncation
             // Use the default seeder class...
             $this->artisan('db:seed');
         }
+
+        $this->afterTruncatingDatabase();
     }
 
     /**
@@ -56,7 +62,7 @@ trait DatabaseTruncation
     {
         $database = $this->app->make('db');
 
-        collect($this->connectionsToTruncate())
+        (new Collection($this->connectionsToTruncate()))
             ->each(function ($name) use ($database) {
                 $connection = $database->connection($name);
 
@@ -79,16 +85,60 @@ trait DatabaseTruncation
 
         $connection->unsetEventDispatcher();
 
-        collect(static::$allTables[$name] ??= $connection->getDoctrineSchemaManager()->listTableNames())
+        (new Collection($this->getAllTablesForConnection($connection, $name)))
             ->when(
-                property_exists($this, 'tablesToTruncate'),
-                fn ($tables) => $tables->intersect($this->tablesToTruncate),
-                fn ($tables) => $tables->diff($this->exceptTables($name))
+                $this->tablesToTruncate($connection, $name),
+                function (Collection $tables, array $tablesToTruncate) {
+                    return $tables->filter(fn (array $table) => $this->tableExistsIn($table, $tablesToTruncate));
+                },
+                function (Collection $tables) use ($connection, $name) {
+                    $exceptTables = $this->exceptTables($connection, $name);
+
+                    return $tables->filter(fn (array $table) => ! $this->tableExistsIn($table, $exceptTables));
+                }
             )
-            ->filter(fn ($table) => $connection->table($table)->exists())
-            ->each(fn ($table) => $connection->table($table)->truncate());
+            ->each(function (array $table) use ($connection) {
+                $connection->withoutTablePrefix(function ($connection) use ($table) {
+                    $table = $connection->table(
+                        $table['schema'] ? $table['schema'].'.'.$table['name'] : $table['name']
+                    );
+
+                    if ($table->exists()) {
+                        $table->truncate();
+                    }
+                });
+            });
 
         $connection->setEventDispatcher($dispatcher);
+    }
+
+    /**
+     * Get all the tables that belong to the connection.
+     */
+    protected function getAllTablesForConnection(ConnectionInterface $connection, ?string $name): array
+    {
+        if (isset(static::$allTables[$name])) {
+            return static::$allTables[$name];
+        }
+
+        $schema = $connection->getSchemaBuilder();
+
+        return static::$allTables[$name] = (new Collection($schema->getTables()))->when(
+            $schema instanceof PostgresBuilder ? $schema->getSchemas() : null,
+            fn (Collection $tables, array $schemas) => $tables->filter(
+                fn (array $table) => in_array($table['schema'], $schemas)
+            )
+        )->all();
+    }
+
+    /**
+     * Determine if a table exists in the given list, with or without its schema.
+     */
+    protected function tableExistsIn(array $table, array $tables): bool
+    {
+        return $table['schema']
+            ? ! empty(array_intersect([$table['name'], $table['schema'].'.'.$table['name']], $tables))
+            : in_array($table['name'], $tables);
     }
 
     /**
@@ -103,29 +153,50 @@ trait DatabaseTruncation
     }
 
     /**
-     * Get the tables that should not be truncated.
-     *
-     * @param  string|null  $connectionName
-     * @return array
+     * Get the tables that should be truncated.
      */
-    protected function exceptTables(?string $connectionName): array
+    protected function tablesToTruncate(ConnectionInterface $connection, ?string $connectionName): ?array
     {
-        if (property_exists($this, 'exceptTables')) {
-            $migrationsTable = $this->app['config']->get('database.migrations');
+        return property_exists($this, 'tablesToTruncate') && is_array($this->tablesToTruncate)
+            ? $this->tablesToTruncate[$connectionName] ?? $this->tablesToTruncate
+            : null;
+    }
 
-            if (array_is_list($this->exceptTables ?? [])) {
-                return array_merge(
-                    $this->exceptTables ?? [],
-                    [$migrationsTable],
-                );
-            }
+    /**
+     * Get the tables that should not be truncated.
+     */
+    protected function exceptTables(ConnectionInterface $connection, ?string $connectionName): array
+    {
+        $migrations = $this->app['config']->get('database.migrations');
 
-            return array_merge(
-                $this->exceptTables[$connectionName] ?? [],
+        $migrationsTable = is_array($migrations) ? ($migrations['table'] ?? 'migrations') : $migrations;
+        $migrationsTable = $connection->getTablePrefix().$migrationsTable;
+
+        return property_exists($this, 'exceptTables') && is_array($this->exceptTables)
+            ? array_merge(
+                $this->exceptTables[$connectionName] ?? $this->exceptTables,
                 [$migrationsTable],
-            );
-        }
+            )
+            : [$migrationsTable];
+    }
 
-        return [$this->app['config']->get('database.migrations')];
+    /**
+     * Perform any work that should take place before the database has started truncating.
+     *
+     * @return void
+     */
+    protected function beforeTruncatingDatabase(): void
+    {
+        //
+    }
+
+    /**
+     * Perform any work that should take place once the database has finished truncating.
+     *
+     * @return void
+     */
+    protected function afterTruncatingDatabase(): void
+    {
+        //
     }
 }

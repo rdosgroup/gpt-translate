@@ -7,8 +7,10 @@ use DateTimeInterface;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Queue\Events\JobQueued;
-use Illuminate\Support\Arr;
+use Illuminate\Queue\Events\JobQueueing;
+use Illuminate\Support\Collection;
 use Illuminate\Support\InteractsWithTime;
 use Illuminate\Support\Str;
 
@@ -106,7 +108,7 @@ abstract class Queue
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new InvalidPayloadException(
-                'Unable to JSON encode payload. Error code: '.json_last_error(), $value
+                'Unable to JSON encode payload. Error ('.json_last_error().'): '.json_last_error_msg(), $value
             );
         }
 
@@ -141,7 +143,7 @@ abstract class Queue
             'uuid' => (string) Str::uuid(),
             'displayName' => $this->getDisplayName($job),
             'job' => 'Illuminate\Queue\CallQueuedHandler@call',
-            'maxTries' => $job->tries ?? null,
+            'maxTries' => $this->getJobTries($job),
             'maxExceptions' => $job->maxExceptions ?? null,
             'failOnTimeout' => $job->failOnTimeout ?? false,
             'backoff' => $this->getJobBackoff($job),
@@ -178,6 +180,25 @@ abstract class Queue
     }
 
     /**
+     * Get the maximum number of attempts for an object-based queue handler.
+     *
+     * @param  mixed  $job
+     * @return mixed
+     */
+    public function getJobTries($job)
+    {
+        if (! method_exists($job, 'tries') && ! isset($job->tries)) {
+            return;
+        }
+
+        if (is_null($tries = $job->tries ?? $job->tries())) {
+            return;
+        }
+
+        return $tries;
+    }
+
+    /**
      * Get the backoff for an object-based queue handler.
      *
      * @param  mixed  $job
@@ -193,11 +214,9 @@ abstract class Queue
             return;
         }
 
-        return collect(Arr::wrap($backoff))
-            ->map(function ($backoff) {
-                return $backoff instanceof DateTimeInterface
-                                ? $this->secondsUntil($backoff) : $backoff;
-            })->implode(',');
+        return Collection::wrap($backoff)
+            ->map(fn ($backoff) => $backoff instanceof DateTimeInterface ? $this->secondsUntil($backoff) : $backoff)
+            ->implode(',');
     }
 
     /**
@@ -294,7 +313,7 @@ abstract class Queue
      *
      * @param  \Closure|string|object  $job
      * @param  string  $payload
-     * @param  string  $queue
+     * @param  string|null  $queue
      * @param  \DateTimeInterface|\DateInterval|int|null  $delay
      * @param  callable  $callback
      * @return mixed
@@ -304,16 +323,20 @@ abstract class Queue
         if ($this->shouldDispatchAfterCommit($job) &&
             $this->container->bound('db.transactions')) {
             return $this->container->make('db.transactions')->addCallback(
-                function () use ($payload, $queue, $delay, $callback, $job) {
-                    return tap($callback($payload, $queue, $delay), function ($jobId) use ($job) {
-                        $this->raiseJobQueuedEvent($jobId, $job);
+                function () use ($queue, $job, $payload, $delay, $callback) {
+                    $this->raiseJobQueueingEvent($queue, $job, $payload, $delay);
+
+                    return tap($callback($payload, $queue, $delay), function ($jobId) use ($queue, $job, $payload, $delay) {
+                        $this->raiseJobQueuedEvent($queue, $jobId, $job, $payload, $delay);
                     });
                 }
             );
         }
 
-        return tap($callback($payload, $queue, $delay), function ($jobId) use ($job) {
-            $this->raiseJobQueuedEvent($jobId, $job);
+        $this->raiseJobQueueingEvent($queue, $job, $payload, $delay);
+
+        return tap($callback($payload, $queue, $delay), function ($jobId) use ($queue, $job, $payload, $delay) {
+            $this->raiseJobQueuedEvent($queue, $jobId, $job, $payload, $delay);
         });
     }
 
@@ -325,28 +348,51 @@ abstract class Queue
      */
     protected function shouldDispatchAfterCommit($job)
     {
+        if ($job instanceof ShouldQueueAfterCommit) {
+            return true;
+        }
+
         if (! $job instanceof Closure && is_object($job) && isset($job->afterCommit)) {
             return $job->afterCommit;
         }
 
-        if (isset($this->dispatchAfterCommit)) {
-            return $this->dispatchAfterCommit;
-        }
+        return $this->dispatchAfterCommit ?? false;
+    }
 
-        return false;
+    /**
+     * Raise the job queueing event.
+     *
+     * @param  string  $queue
+     * @param  \Closure|string|object  $job
+     * @param  string  $payload
+     * @param  \DateTimeInterface|\DateInterval|int|null  $delay
+     * @return void
+     */
+    protected function raiseJobQueueingEvent($queue, $job, $payload, $delay)
+    {
+        if ($this->container->bound('events')) {
+            $delay = ! is_null($delay) ? $this->secondsUntil($delay) : $delay;
+
+            $this->container['events']->dispatch(new JobQueueing($this->connectionName, $queue, $job, $payload, $delay));
+        }
     }
 
     /**
      * Raise the job queued event.
      *
+     * @param  string|null  $queue
      * @param  string|int|null  $jobId
      * @param  \Closure|string|object  $job
+     * @param  string  $payload
+     * @param  \DateTimeInterface|\DateInterval|int|null  $delay
      * @return void
      */
-    protected function raiseJobQueuedEvent($jobId, $job)
+    protected function raiseJobQueuedEvent($queue, $jobId, $job, $payload, $delay)
     {
         if ($this->container->bound('events')) {
-            $this->container['events']->dispatch(new JobQueued($this->connectionName, $jobId, $job));
+            $delay = ! is_null($delay) ? $this->secondsUntil($delay) : $delay;
+
+            $this->container['events']->dispatch(new JobQueued($this->connectionName, $queue, $jobId, $job, $payload, $delay));
         }
     }
 

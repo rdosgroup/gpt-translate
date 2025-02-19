@@ -3,19 +3,26 @@
 namespace OpenAI\Testing;
 
 use OpenAI\Contracts\ClientContract;
+use OpenAI\Contracts\Resources\VectorStoresContract;
 use OpenAI\Contracts\ResponseContract;
+use OpenAI\Contracts\ResponseStreamContract;
 use OpenAI\Responses\StreamResponse;
 use OpenAI\Testing\Requests\TestRequest;
+use OpenAI\Testing\Resources\AssistantsTestResource;
 use OpenAI\Testing\Resources\AudioTestResource;
+use OpenAI\Testing\Resources\BatchesTestResource;
 use OpenAI\Testing\Resources\ChatTestResource;
 use OpenAI\Testing\Resources\CompletionsTestResource;
 use OpenAI\Testing\Resources\EditsTestResource;
 use OpenAI\Testing\Resources\EmbeddingsTestResource;
 use OpenAI\Testing\Resources\FilesTestResource;
 use OpenAI\Testing\Resources\FineTunesTestResource;
+use OpenAI\Testing\Resources\FineTuningTestResource;
 use OpenAI\Testing\Resources\ImagesTestResource;
 use OpenAI\Testing\Resources\ModelsTestResource;
 use OpenAI\Testing\Resources\ModerationsTestResource;
+use OpenAI\Testing\Resources\ThreadsTestResource;
+use OpenAI\Testing\Resources\VectorStoresTestResource;
 use PHPUnit\Framework\Assert as PHPUnit;
 use Throwable;
 
@@ -29,9 +36,7 @@ class ClientFake implements ClientContract
     /**
      * @param  array<array-key, ResponseContract|StreamResponse|string>  $responses
      */
-    public function __construct(protected array $responses = [])
-    {
-    }
+    public function __construct(protected array $responses = []) {}
 
     /**
      * @param  array<array-key, Response>  $responses
@@ -68,7 +73,7 @@ class ClientFake implements ClientContract
     /**
      * @return mixed[]
      */
-    private function sent(string $resource, callable $callback = null): array
+    private function sent(string $resource, ?callable $callback = null): array
     {
         if (! $this->hasSent($resource)) {
             return [];
@@ -76,7 +81,7 @@ class ClientFake implements ClientContract
 
         $callback = $callback ?: fn (): bool => true;
 
-        return array_filter($this->resourcesOf($resource), fn (TestRequest $resource) => $callback($resource->method(), $resource->parameters()));
+        return array_filter($this->resourcesOf($resource), fn (TestRequest $resource) => $callback($resource->method(), ...$resource->args()));
     }
 
     private function hasSent(string $resource): bool
@@ -84,7 +89,7 @@ class ClientFake implements ClientContract
         return $this->resourcesOf($resource) !== [];
     }
 
-    public function assertNotSent(string $resource, callable $callback = null): void
+    public function assertNotSent(string $resource, ?callable $callback = null): void
     {
         PHPUnit::assertCount(
             0, $this->sent($resource, $callback),
@@ -110,7 +115,7 @@ class ClientFake implements ClientContract
         return array_filter($this->requests, fn (TestRequest $request): bool => $request->resource() === $type);
     }
 
-    public function record(TestRequest $request): ResponseContract|StreamResponse|string
+    public function record(TestRequest $request): ResponseContract|ResponseStreamContract|string
     {
         $this->requests[] = $request;
 
@@ -167,6 +172,11 @@ class ClientFake implements ClientContract
         return new FineTunesTestResource($this);
     }
 
+    public function fineTuning(): FineTuningTestResource
+    {
+        return new FineTuningTestResource($this);
+    }
+
     public function moderations(): ModerationsTestResource
     {
         return new ModerationsTestResource($this);
@@ -175,5 +185,25 @@ class ClientFake implements ClientContract
     public function images(): ImagesTestResource
     {
         return new ImagesTestResource($this);
+    }
+
+    public function assistants(): AssistantsTestResource
+    {
+        return new AssistantsTestResource($this);
+    }
+
+    public function threads(): ThreadsTestResource
+    {
+        return new ThreadsTestResource($this);
+    }
+
+    public function batches(): BatchesTestResource
+    {
+        return new BatchesTestResource($this);
+    }
+
+    public function vectorStores(): VectorStoresContract
+    {
+        return new VectorStoresTestResource($this);
     }
 }

@@ -8,12 +8,12 @@ use OpenAI\Contracts\ResponseContract;
 use OpenAI\Responses\Concerns\ArrayAccessible;
 
 /**
- * @implements ResponseContract<array{id: int, seek: int, start: float, end: float, text: string, tokens: array<int, int>, temperature: float, avg_logprob: float, compression_ratio: float, no_speech_prob: float, transient: bool}>
+ * @implements ResponseContract<array{id: int, seek: int, start: float, end: float, text: string, tokens: array<int, int>, temperature: float, avg_logprob: float, compression_ratio: float, no_speech_prob: float, transient?: bool}>
  */
 final class TranscriptionResponseSegment implements ResponseContract
 {
     /**
-     * @use ArrayAccessible<array{id: int, seek: int, start: float, end: float, text: string, tokens: array<int, int>, temperature: float, avg_logprob: float, compression_ratio: float, no_speech_prob: float, transient: bool}>
+     * @use ArrayAccessible<array{id: int, seek: int, start: float, end: float, text: string, tokens: array<int, int>, temperature: float, avg_logprob: float, compression_ratio: float, no_speech_prob: float, transient?: bool}>
      */
     use ArrayAccessible;
 
@@ -31,9 +31,8 @@ final class TranscriptionResponseSegment implements ResponseContract
         public readonly float $avgLogprob,
         public readonly float $compressionRatio,
         public readonly float $noSpeechProb,
-        public readonly bool $transient,
-    ) {
-    }
+        public readonly ?bool $transient,
+    ) {}
 
     /**
      * Acts as static factory, and returns a new Response instance.
@@ -53,7 +52,7 @@ final class TranscriptionResponseSegment implements ResponseContract
             $attributes['avg_logprob'],
             $attributes['compression_ratio'],
             $attributes['no_speech_prob'],
-            $attributes['transient'] ?? false,
+            $attributes['transient'] ?? null,
         );
     }
 
@@ -62,7 +61,7 @@ final class TranscriptionResponseSegment implements ResponseContract
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'id' => $this->id,
             'seek' => $this->seek,
             'start' => $this->start,
@@ -73,7 +72,12 @@ final class TranscriptionResponseSegment implements ResponseContract
             'avg_logprob' => $this->avgLogprob,
             'compression_ratio' => $this->compressionRatio,
             'no_speech_prob' => $this->noSpeechProb,
-            'transient' => $this->transient,
         ];
+
+        if ($this->transient !== null) {
+            $data['transient'] = $this->transient;
+        }
+
+        return $data;
     }
 }

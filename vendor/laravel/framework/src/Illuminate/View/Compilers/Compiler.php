@@ -2,6 +2,7 @@
 
 namespace Illuminate\View\Compilers;
 
+use ErrorException;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -60,8 +61,8 @@ abstract class Compiler
         $cachePath,
         $basePath = '',
         $shouldCache = true,
-        $compiledExtension = 'php')
-    {
+        $compiledExtension = 'php',
+    ) {
         if (! $cachePath) {
             throw new InvalidArgumentException('Please provide a valid cache path.');
         }
@@ -89,6 +90,8 @@ abstract class Compiler
      *
      * @param  string  $path
      * @return bool
+     *
+     * @throws \ErrorException
      */
     public function isExpired($path)
     {
@@ -105,8 +108,16 @@ abstract class Compiler
             return true;
         }
 
-        return $this->files->lastModified($path) >=
-               $this->files->lastModified($compiled);
+        try {
+            return $this->files->lastModified($path) >=
+                $this->files->lastModified($compiled);
+        } catch (ErrorException $exception) {
+            if (! $this->files->exists($compiled)) {
+                return true;
+            }
+
+            throw $exception;
+        }
     }
 
     /**

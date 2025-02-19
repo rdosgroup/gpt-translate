@@ -4,6 +4,7 @@ namespace Illuminate\Process;
 
 use Illuminate\Contracts\Process\ProcessResult as ProcessResultContract;
 use Illuminate\Process\Exceptions\ProcessFailedException;
+use Illuminate\Support\Collection;
 
 class FakeProcessResult implements ProcessResultContract
 {
@@ -66,7 +67,7 @@ class FakeProcessResult implements ProcessResultContract
             return rtrim($output, "\n")."\n";
         } elseif (is_array($output)) {
             return rtrim(
-                collect($output)
+                (new Collection($output))
                     ->map(fn ($line) => rtrim($line, "\n")."\n")
                     ->implode(''),
                 "\n"
@@ -172,8 +173,10 @@ class FakeProcessResult implements ProcessResultContract
      *
      * @param  callable|null  $callback
      * @return $this
+     *
+     * @throws \Illuminate\Process\Exceptions\ProcessFailedException
      */
-    public function throw(callable $callback = null)
+    public function throw(?callable $callback = null)
     {
         if ($this->successful()) {
             return $this;
@@ -194,8 +197,10 @@ class FakeProcessResult implements ProcessResultContract
      * @param  bool  $condition
      * @param  callable|null  $callback
      * @return $this
+     *
+     * @throws \Throwable
      */
-    public function throwIf(bool $condition, callable $callback = null)
+    public function throwIf(bool $condition, ?callable $callback = null)
     {
         if ($condition) {
             return $this->throw($callback);

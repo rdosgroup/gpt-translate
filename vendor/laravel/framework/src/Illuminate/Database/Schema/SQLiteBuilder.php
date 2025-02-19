@@ -2,6 +2,7 @@
 
 namespace Illuminate\Database\Schema;
 
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\File;
 
 class SQLiteBuilder extends Builder
@@ -31,13 +32,70 @@ class SQLiteBuilder extends Builder
     }
 
     /**
+     * Determine if the given table exists.
+     *
+     * @param  string  $table
+     * @return bool
+     */
+    public function hasTable($table)
+    {
+        $table = $this->connection->getTablePrefix().$table;
+
+        return (bool) $this->connection->scalar(
+            $this->grammar->compileTableExists($table)
+        );
+    }
+
+    /**
+     * Get the tables for the database.
+     *
+     * @param  bool  $withSize
+     * @return array
+     */
+    public function getTables($withSize = true)
+    {
+        if ($withSize) {
+            try {
+                $withSize = $this->connection->scalar($this->grammar->compileDbstatExists());
+            } catch (QueryException $e) {
+                $withSize = false;
+            }
+        }
+
+        return $this->connection->getPostProcessor()->processTables(
+            $this->connection->selectFromWriteConnection($this->grammar->compileTables($withSize))
+        );
+    }
+
+    /**
+     * Get the columns for a given table.
+     *
+     * @param  string  $table
+     * @return array
+     */
+    public function getColumns($table)
+    {
+        $table = $this->connection->getTablePrefix().$table;
+
+        return $this->connection->getPostProcessor()->processColumns(
+            $this->connection->selectFromWriteConnection($this->grammar->compileColumns($table)),
+            $this->connection->scalar($this->grammar->compileSqlCreateStatement($table))
+        );
+    }
+
+    /**
      * Drop all tables from the database.
      *
      * @return void
      */
     public function dropAllTables()
     {
-        if ($this->connection->getDatabaseName() !== ':memory:') {
+        $database = $this->connection->getDatabaseName();
+
+        if ($database !== ':memory:' &&
+            ! str_contains($database, '?mode=memory') &&
+            ! str_contains($database, '&mode=memory')
+        ) {
             return $this->refreshDatabaseFile();
         }
 
@@ -67,26 +125,41 @@ class SQLiteBuilder extends Builder
     }
 
     /**
-     * Get all of the table names for the database.
+     * Set the busy timeout.
      *
-     * @return array
+     * @param  int  $milliseconds
+     * @return bool
      */
-    public function getAllTables()
+    public function setBusyTimeout($milliseconds)
     {
-        return $this->connection->select(
-            $this->grammar->compileGetAllTables()
+        return $this->connection->statement(
+            $this->grammar->compileSetBusyTimeout($milliseconds)
         );
     }
 
     /**
-     * Get all of the view names for the database.
+     * Set the journal mode.
      *
-     * @return array
+     * @param  string  $mode
+     * @return bool
      */
-    public function getAllViews()
+    public function setJournalMode($mode)
     {
-        return $this->connection->select(
-            $this->grammar->compileGetAllViews()
+        return $this->connection->statement(
+            $this->grammar->compileSetJournalMode($mode)
+        );
+    }
+
+    /**
+     * Set the synchronous mode.
+     *
+     * @param  int  $mode
+     * @return bool
+     */
+    public function setSynchronous($mode)
+    {
+        return $this->connection->statement(
+            $this->grammar->compileSetSynchronous($mode)
         );
     }
 

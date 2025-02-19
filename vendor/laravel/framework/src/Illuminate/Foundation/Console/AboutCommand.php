@@ -2,9 +2,12 @@
 
 namespace Illuminate\Foundation\Console;
 
+use Closure;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Composer;
 use Illuminate\Support\Str;
+use Illuminate\Support\Stringable;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 #[AsCommand(name: 'about')]
@@ -68,8 +71,8 @@ class AboutCommand extends Command
     {
         $this->gatherApplicationInformation();
 
-        collect(static::$data)
-            ->map(fn ($items) => collect($items)
+        (new Collection(static::$data))
+            ->map(fn ($items) => (new Collection($items))
                 ->map(function ($value) {
                     if (is_array($value)) {
                         return [$value];
@@ -79,7 +82,7 @@ class AboutCommand extends Command
                         $value = $this->laravel->make($value);
                     }
 
-                    return collect($this->laravel->call($value))
+                    return (new Collection($this->laravel->call($value)))
                         ->map(fn ($value, $key) => [$key, $value])
                         ->values()
                         ->all();
@@ -91,7 +94,7 @@ class AboutCommand extends Command
                 return $index === false ? 99 : $index;
             })
             ->filter(function ($data, $key) {
-                return $this->option('only') ? in_array(Str::of($key)->lower()->snake(), $this->sections()) : true;
+                return $this->option('only') ? in_array($this->toSearchKeyword($key), $this->sections()) : true;
             })
             ->pipe(fn ($data) => $this->display($data));
 
@@ -127,7 +130,7 @@ class AboutCommand extends Command
             $data->pipe(fn ($data) => $section !== 'Environment' ? $data->sort() : $data)->each(function ($detail) {
                 [$label, $value] = $detail;
 
-                $this->components->twoColumnDetail($label, value($value));
+                $this->components->twoColumnDetail($label, value($value, false));
             });
         });
     }
@@ -141,7 +144,11 @@ class AboutCommand extends Command
     protected function displayJson($data)
     {
         $output = $data->flatMap(function ($data, $section) {
-            return [(string) Str::of($section)->snake() => $data->mapWithKeys(fn ($item, $key) => [(string) Str::of($item[0])->lower()->snake() => value($item[1])])];
+            return [
+                (new Stringable($section))->snake()->value() => $data->mapWithKeys(fn ($item, $key) => [
+                    $this->toSearchKeyword($item[0]) => value($item[1], true),
+                ]),
+            ];
         });
 
         $this->output->writeln(strip_tags(json_encode($output)));
@@ -154,40 +161,52 @@ class AboutCommand extends Command
      */
     protected function gatherApplicationInformation()
     {
+        self::$data = [];
+
+        $formatEnabledStatus = fn ($value) => $value ? '<fg=yellow;options=bold>ENABLED</>' : 'OFF';
+        $formatCachedStatus = fn ($value) => $value ? '<fg=green;options=bold>CACHED</>' : '<fg=yellow;options=bold>NOT CACHED</>';
+
         static::addToSection('Environment', fn () => [
             'Application Name' => config('app.name'),
             'Laravel Version' => $this->laravel->version(),
             'PHP Version' => phpversion(),
             'Composer Version' => $this->composer->getVersion() ?? '<fg=yellow;options=bold>-</>',
             'Environment' => $this->laravel->environment(),
-            'Debug Mode' => config('app.debug') ? '<fg=yellow;options=bold>ENABLED</>' : 'OFF',
+            'Debug Mode' => static::format(config('app.debug'), console: $formatEnabledStatus),
             'URL' => Str::of(config('app.url'))->replace(['http://', 'https://'], ''),
-            'Maintenance Mode' => $this->laravel->isDownForMaintenance() ? '<fg=yellow;options=bold>ENABLED</>' : 'OFF',
+            'Maintenance Mode' => static::format($this->laravel->isDownForMaintenance(), console: $formatEnabledStatus),
+            'Timezone' => config('app.timezone'),
+            'Locale' => config('app.locale'),
         ]);
 
         static::addToSection('Cache', fn () => [
-            'Config' => $this->laravel->configurationIsCached() ? '<fg=green;options=bold>CACHED</>' : '<fg=yellow;options=bold>NOT CACHED</>',
-            'Events' => $this->laravel->eventsAreCached() ? '<fg=green;options=bold>CACHED</>' : '<fg=yellow;options=bold>NOT CACHED</>',
-            'Routes' => $this->laravel->routesAreCached() ? '<fg=green;options=bold>CACHED</>' : '<fg=yellow;options=bold>NOT CACHED</>',
-            'Views' => $this->hasPhpFiles($this->laravel->storagePath('framework/views')) ? '<fg=green;options=bold>CACHED</>' : '<fg=yellow;options=bold>NOT CACHED</>',
+            'Config' => static::format($this->laravel->configurationIsCached(), console: $formatCachedStatus),
+            'Events' => static::format($this->laravel->eventsAreCached(), console: $formatCachedStatus),
+            'Routes' => static::format($this->laravel->routesAreCached(), console: $formatCachedStatus),
+            'Views' => static::format($this->hasPhpFiles($this->laravel->storagePath('framework/views')), console: $formatCachedStatus),
         ]);
-
-        $logChannel = config('logging.default');
-
-        if (config('logging.channels.'.$logChannel.'.driver') === 'stack') {
-            $secondary = collect(config('logging.channels.'.$logChannel.'.channels'))
-                ->implode(', ');
-
-            $logs = '<fg=yellow;options=bold>'.$logChannel.'</> <fg=gray;options=bold>/</> '.$secondary;
-        } else {
-            $logs = $logChannel;
-        }
 
         static::addToSection('Drivers', fn () => array_filter([
             'Broadcasting' => config('broadcasting.default'),
             'Cache' => config('cache.default'),
             'Database' => config('database.default'),
-            'Logs' => $logs,
+            'Logs' => function ($json) {
+                $logChannel = config('logging.default');
+
+                if (config('logging.channels.'.$logChannel.'.driver') === 'stack') {
+                    $secondary = new Collection(config('logging.channels.'.$logChannel.'.channels'));
+
+                    return value(static::format(
+                        value: $logChannel,
+                        console: fn ($value) => '<fg=yellow;options=bold>'.$value.'</> <fg=gray;options=bold>/</> '.$secondary->implode(', '),
+                        json: fn () => $secondary->all(),
+                    ), $json);
+                } else {
+                    $logs = $logChannel;
+                }
+
+                return $logs;
+            },
             'Mail' => config('mail.default'),
             'Octane' => config('octane.server'),
             'Queue' => config('queue.default'),
@@ -195,7 +214,7 @@ class AboutCommand extends Command
             'Session' => config('session.driver'),
         ]));
 
-        collect(static::$customDataResolvers)->each->__invoke();
+        (new Collection(static::$customDataResolvers))->each->__invoke();
     }
 
     /**
@@ -217,7 +236,7 @@ class AboutCommand extends Command
      * @param  string|null  $value
      * @return void
      */
-    public static function add(string $section, $data, string $value = null)
+    public static function add(string $section, $data, ?string $value = null)
     {
         static::$customDataResolvers[] = fn () => static::addToSection($section, $data, $value);
     }
@@ -230,7 +249,7 @@ class AboutCommand extends Command
      * @param  string|null  $value
      * @return void
      */
-    protected static function addToSection(string $section, $data, string $value = null)
+    protected static function addToSection(string $section, $data, ?string $value = null)
     {
         if (is_array($data)) {
             foreach ($data as $key => $value) {
@@ -250,6 +269,53 @@ class AboutCommand extends Command
      */
     protected function sections()
     {
-        return array_filter(explode(',', $this->option('only') ?? ''));
+        return (new Collection(explode(',', $this->option('only') ?? '')))
+            ->filter()
+            ->map(fn ($only) => $this->toSearchKeyword($only))
+            ->all();
+    }
+
+    /**
+     * Materialize a function that formats a given value for CLI or JSON output.
+     *
+     * @param  mixed  $value
+     * @param  (\Closure(mixed):(mixed))|null  $console
+     * @param  (\Closure(mixed):(mixed))|null  $json
+     * @return \Closure(bool):mixed
+     */
+    public static function format($value, ?Closure $console = null, ?Closure $json = null)
+    {
+        return function ($isJson) use ($value, $console, $json) {
+            if ($isJson === true && $json instanceof Closure) {
+                return value($json, $value);
+            } elseif ($isJson === false && $console instanceof Closure) {
+                return value($console, $value);
+            }
+
+            return value($value);
+        };
+    }
+
+    /**
+     * Format the given string for searching.
+     *
+     * @param  string  $value
+     * @return string
+     */
+    protected function toSearchKeyword(string $value)
+    {
+        return (new Stringable($value))->lower()->snake()->value();
+    }
+
+    /**
+     * Flush the registered about data.
+     *
+     * @return void
+     */
+    public static function flushState()
+    {
+        static::$data = [];
+
+        static::$customDataResolvers = [];
     }
 }

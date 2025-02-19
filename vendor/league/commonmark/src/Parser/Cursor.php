@@ -322,20 +322,21 @@ class Cursor
      */
     public function advanceToNextNonSpaceOrNewline(): int
     {
-        $remainder = $this->getRemainder();
+        $currentCharacter = $this->getCurrentCharacter();
 
         // Optimization: Avoid the regex if we know there are no spaces or newlines
-        if ($remainder === '' || ($remainder[0] !== ' ' && $remainder[0] !== "\n")) {
+        if ($currentCharacter !== ' ' && $currentCharacter !== "\n") {
             $this->previousPosition = $this->currentPosition;
 
             return 0;
         }
 
         $matches = [];
-        \preg_match('/^ *(?:\n *)?/', $remainder, $matches, \PREG_OFFSET_CAPTURE);
+        \preg_match('/^ *(?:\n *)?/', $this->getRemainder(), $matches, \PREG_OFFSET_CAPTURE);
 
         // [0][0] contains the matched text
         // [0][1] contains the index of that match
+        \assert(isset($matches[0]));
         $increment = $matches[0][1] + \strlen($matches[0][0]);
 
         $this->advanceBy($increment);
@@ -393,6 +394,8 @@ class Cursor
      * Try to match a regular expression
      *
      * Returns the matching text and advances to the end of that match
+     *
+     * @psalm-param non-empty-string $regex
      */
     public function match(string $regex): ?string
     {

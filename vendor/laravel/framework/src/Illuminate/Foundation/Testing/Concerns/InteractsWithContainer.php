@@ -5,6 +5,7 @@ namespace Illuminate\Foundation\Testing\Concerns;
 use Closure;
 use Illuminate\Foundation\Mix;
 use Illuminate\Foundation\Vite;
+use Illuminate\Support\Defer\DeferredCallbackCollection;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\HtmlString;
 use Mockery;
@@ -24,6 +25,13 @@ trait InteractsWithContainer
      * @var \Illuminate\Foundation\Mix|null
      */
     protected $originalMix;
+
+    /**
+     * The original deferred callbacks collection.
+     *
+     * @var \Illuminate\Support\Defer\DeferredCallbackCollection|null
+     */
+    protected $originalDeferredCallbacksCollection;
 
     /**
      * Register an instance of an object in the container.
@@ -58,7 +66,7 @@ trait InteractsWithContainer
      * @param  \Closure|null  $mock
      * @return \Mockery\MockInterface
      */
-    protected function mock($abstract, Closure $mock = null)
+    protected function mock($abstract, ?Closure $mock = null)
     {
         return $this->instance($abstract, Mockery::mock(...array_filter(func_get_args())));
     }
@@ -70,7 +78,7 @@ trait InteractsWithContainer
      * @param  \Closure|null  $mock
      * @return \Mockery\MockInterface
      */
-    protected function partialMock($abstract, Closure $mock = null)
+    protected function partialMock($abstract, ?Closure $mock = null)
     {
         return $this->instance($abstract, Mockery::mock(...array_filter(func_get_args()))->makePartial());
     }
@@ -82,7 +90,7 @@ trait InteractsWithContainer
      * @param  \Closure|null  $mock
      * @return \Mockery\MockInterface
      */
-    protected function spy($abstract, Closure $mock = null)
+    protected function spy($abstract, ?Closure $mock = null)
     {
         return $this->instance($abstract, Mockery::spy(...array_filter(func_get_args())));
     }
@@ -113,14 +121,14 @@ trait InteractsWithContainer
 
         Facade::clearResolvedInstance(Vite::class);
 
-        $this->swap(Vite::class, new class
+        $this->swap(Vite::class, new class extends Vite
         {
-            public function __invoke()
+            public function __invoke($entrypoints, $buildDirectory = null)
             {
-                return '';
+                return new HtmlString('');
             }
 
-            public function __call($name, $arguments)
+            public function __call($method, $parameters)
             {
                 return '';
             }
@@ -130,32 +138,37 @@ trait InteractsWithContainer
                 return '';
             }
 
-            public function useIntegrityKey()
+            public function useIntegrityKey($key)
             {
                 return $this;
             }
 
-            public function useBuildDirectory()
+            public function useBuildDirectory($path)
             {
                 return $this;
             }
 
-            public function useHotFile()
+            public function useHotFile($path)
             {
                 return $this;
             }
 
-            public function withEntryPoints()
+            public function withEntryPoints($entryPoints)
             {
                 return $this;
             }
 
-            public function useScriptTagAttributes()
+            public function useScriptTagAttributes($attributes)
             {
                 return $this;
             }
 
-            public function useStyleTagAttributes()
+            public function useStyleTagAttributes($attributes)
+            {
+                return $this;
+            }
+
+            public function usePreloadTagAttributes($attributes)
             {
                 return $this;
             }
@@ -163,6 +176,21 @@ trait InteractsWithContainer
             public function preloadedAssets()
             {
                 return [];
+            }
+
+            public function reactRefresh()
+            {
+                return '';
+            }
+
+            public function content($asset, $buildDirectory = null)
+            {
+                return '';
+            }
+
+            public function asset($asset, $buildDirectory = null)
+            {
+                return '';
             }
         });
 
@@ -210,6 +238,42 @@ trait InteractsWithContainer
     {
         if ($this->originalMix) {
             $this->app->instance(Mix::class, $this->originalMix);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Execute deferred functions immediately.
+     *
+     * @return $this
+     */
+    protected function withoutDefer()
+    {
+        if ($this->originalDeferredCallbacksCollection == null) {
+            $this->originalDeferredCallbacksCollection = $this->app->make(DeferredCallbackCollection::class);
+        }
+
+        $this->swap(DeferredCallbackCollection::class, new class extends DeferredCallbackCollection
+        {
+            public function offsetSet(mixed $offset, mixed $value): void
+            {
+                $value();
+            }
+        });
+
+        return $this;
+    }
+
+    /**
+     * Restore deferred functions.
+     *
+     * @return $this
+     */
+    protected function withDefer()
+    {
+        if ($this->originalDeferredCallbacksCollection) {
+            $this->app->instance(DeferredCallbackCollection::class, $this->originalDeferredCallbacksCollection);
         }
 
         return $this;

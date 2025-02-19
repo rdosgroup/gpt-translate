@@ -14,7 +14,7 @@
       "email": "richygc@icloud.com"
     }
   ],
-  "minimum-stability": "dev",
+  "minimum-stability": "stable",
   "prefer-stable": true,
   "config": {
     "allow-plugins": {
@@ -22,7 +22,7 @@
     }
   },
   "require": {
-    "php": "^8.0",
-    "openai-php/laravel": "^0.6.3"
+    "php": "^8.3",
+    "openai-php/laravel": "^0.10.2"
   }
 }

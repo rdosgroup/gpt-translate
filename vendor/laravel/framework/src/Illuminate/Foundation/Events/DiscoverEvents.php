@@ -2,6 +2,7 @@
 
 namespace Illuminate\Foundation\Events;
 
+use Illuminate\Support\Collection;
 use Illuminate\Support\Reflector;
 use Illuminate\Support\Str;
 use ReflectionClass;
@@ -13,6 +14,13 @@ use Symfony\Component\Finder\Finder;
 class DiscoverEvents
 {
     /**
+     * The callback to be used to guess class names.
+     *
+     * @var callable(SplFileInfo, string): string|null
+     */
+    public static $guessClassNamesUsingCallback;
+
+    /**
      * Get all of the events and listeners by searching the given listener directory.
      *
      * @param  string  $listenerPath
@@ -21,8 +29,8 @@ class DiscoverEvents
      */
     public static function within($listenerPath, $basePath)
     {
-        $listeners = collect(static::getListenerEvents(
-            (new Finder)->files()->in($listenerPath), $basePath
+        $listeners = new Collection(static::getListenerEvents(
+            Finder::create()->files()->in($listenerPath), $basePath
         ));
 
         $discoveredEvents = [];
@@ -87,12 +95,27 @@ class DiscoverEvents
      */
     protected static function classFromFile(SplFileInfo $file, $basePath)
     {
+        if (static::$guessClassNamesUsingCallback) {
+            return call_user_func(static::$guessClassNamesUsingCallback, $file, $basePath);
+        }
+
         $class = trim(Str::replaceFirst($basePath, '', $file->getRealPath()), DIRECTORY_SEPARATOR);
 
-        return str_replace(
+        return ucfirst(Str::camel(str_replace(
             [DIRECTORY_SEPARATOR, ucfirst(basename(app()->path())).'\\'],
             ['\\', app()->getNamespace()],
             ucfirst(Str::replaceLast('.php', '', $class))
-        );
+        )));
+    }
+
+    /**
+     * Specify a callback to be used to guess class names.
+     *
+     * @param  callable(SplFileInfo, string): string  $callback
+     * @return void
+     */
+    public static function guessClassNamesUsing(callable $callback)
+    {
+        static::$guessClassNamesUsingCallback = $callback;
     }
 }
