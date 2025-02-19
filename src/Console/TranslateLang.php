@@ -45,7 +45,6 @@ class TranslateLang extends Command
             $this->info("\File translated successfully");
             $this->info('Translation finished at ' . Carbon::now()->toDateTimeString());
         } catch (\Throwable $th) {
-            $this->stopSpinner();
             $this->error($th->getMessage());
         }
     }
