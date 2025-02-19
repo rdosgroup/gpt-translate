@@ -18,7 +18,7 @@ class OpenaiService
             $translated_strings[$string] = $this->translate_string($string, $origin, $lang, $context, $model);
         }
         // define file path
-        $file = $path . "/$lang.json";
+        $file = $path ? $path . "/$lang.json" : base_path("lang/$lang.json");
         // if file path does not exist, create it
         if (!file_exists($file)) {
             // verify if directory exists
@@ -29,6 +29,7 @@ class OpenaiService
                 // if directory exists, create file
                 touch($file);
             }
+            $json = json_encode($translated_strings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         } else {
             // if file exists only add new strings that are not in the file
             $old_strings = json_decode(file_get_contents($file), true);
