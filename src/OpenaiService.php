@@ -6,10 +6,10 @@ use OpenAI\Laravel\Facades\OpenAI;
 
 class OpenaiService
 {
-    public function translate_file($path = '.', $origin = 'en', $lang = 'es', $context = '', $model = "gpt-4o")
+    public function translate_file($path = null, $origin = 'en', $lang = 'es', $context = '', $model = "gpt-4o")
     {
         // get file from original content
-        $file_origin = $path . "/$origin.json";
+        $file_origin = $path ? $path . "/$origin.json" : base_path("lang/$origin.json");
         // decode json file into array
         $strings = json_decode(file_get_contents($file_origin), true);
         // translate each string

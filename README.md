@@ -77,10 +77,10 @@ By default, the package uses GPT-4o. If desired, specify any other OpenAI model 
 php artisan translate:lang --origin=en --lang=fr --model=gpt-4o-mini
 ```
 
-**Specify the Model (Optional)**  
-By default, the package uses GPT-3.5. If desired, specify any other OpenAI model compatible with the Chat API:
+**Specify the Resource Path**  
+By default, the package scans the `lang` folder for translation strings. If your translation strings are located elsewhere, specify the path:
 ```bash
-php artisan translate:lang --origin=en --lang=fr --model=gpt-4
+php artisan translate:lang --origin=en --lang=fr --path=./lang/vendor/nova
 ```
 
 **Configuration for Context and Exclusions (Optional)**  
@@ -101,7 +101,7 @@ return [
 # Example Usage with All Parameters
 
 ```bash
-php artisan translate:lang --origin=en --lang=fr --context="a tech startup specializing in AI products" --exclude="ChatGPT,OpenAI,Laravel" --model=gpt-4
+php artisan translate:lang --origin=en --lang=fr --context="a tech startup specializing in AI products" --exclude="ChatGPT,OpenAI,Laravel" --model=gpt-4 --path=./lang/vendor/nova
 ```
 
 ## Conclusion

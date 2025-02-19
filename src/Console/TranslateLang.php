@@ -14,7 +14,7 @@ class TranslateLang extends Command
      *
      * @var string
      */
-    protected $signature = 'translate:lang {--origin=} {--lang=} {--context=} {--model=gpt-4o} {--exclude=}';
+    protected $signature = 'translate:lang {--origin=} {--lang=} {--context=} {--model=gpt-4o} {--exclude=} {--path=}';
 
     /**
      * The console command description.
@@ -40,8 +40,9 @@ class TranslateLang extends Command
                 $excludeText = "IMPORTANT: Never translate the following words or phrases: '" . implode("', '", $exclude) . "'. These should always remain in their original form.";
                 $context .= "\n\n" . $excludeText;
             }
+            $path = $this->option('path') ?? base_path("lang");
             $service = new OpenaiService();
-            $service->translate_file(base_path("lang"), $this->option('origin') ?? "en", $this->option('lang') ?? "es", $context, $model);
+            $service->translate_file($path, $this->option('origin') ?? "en", $this->option('lang') ?? "es", $context, $model);
             $this->info("\File translated successfully");
             $this->info('Translation finished at ' . Carbon::now()->toDateTimeString());
         } catch (\Throwable $th) {
