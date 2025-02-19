@@ -8,10 +8,13 @@ class FileService
     /**
      * Save array of strings into a file with json format on a given path
      */
-    public function strings_file($lang = "en", $path = ".")
+    public function strings_file($lang = "en", $path = null)
     {
+
+        $path = $path ?? base_path("lang");
+
         $strings_array = $this->strings_keys();
-        $json = json_encode($strings_array, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $json = json_encode($strings_array, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         $file = $path . "/$lang.json";
         // if file path does not exist, create it
         if (!file_exists($file)) {
@@ -28,7 +31,7 @@ class FileService
             $old_strings = json_decode(file_get_contents($file), true);
             $new_strings = array_diff($strings_array, $old_strings);
             $strings_array = array_merge($old_strings, $new_strings);
-            $json = json_encode($strings_array, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            $json = json_encode($strings_array, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         }
         return file_put_contents($file, $json);
     }
@@ -62,7 +65,7 @@ class FileService
         $strings = array_filter($strings, function ($string) {
             return !empty($string);
         });
-        // remove "\" sacapes like "\'"
+        // remove "\" scapes like "\'"
         $strings = array_map(function ($string) {
             return str_replace("\\'", "'", $string);
         }, $strings);

@@ -14,7 +14,7 @@ class TranslateLang extends Command
      *
      * @var string
      */
-    protected $signature = 'translate:lang {--origin=} {--lang=} {--context=} {--model=gpt-3.5-turbo}';
+    protected $signature = 'translate:lang {--origin=} {--lang=} {--context=} {--model=gpt-4o} {--exclude=}';
 
     /**
      * The console command description.
@@ -33,15 +33,20 @@ class TranslateLang extends Command
         $this->info('Starting translation at ' . Carbon::now()->toDateTimeString());
         $this->info('Processing... Please wait.');
         try {
+            $context = $this->option('context') ?? config('gpt-translate.default_context') ?? '';
+            $model = $this->option('model') ?? "gpt-4o";
+            $exclude = $this->option('exclude') ? explode(',', $this->option('exclude')) : explode(',', config('gpt-translate.exclude_words')) ?? [];
+            if (!empty($exclude)) {
+                $excludeText = "IMPORTANT: Never translate the following words or phrases: '" . implode("', '", $exclude) . "'. These should always remain in their original form.";
+                $context .= "\n\n" . $excludeText;
+            }
             $service = new OpenaiService();
-            $service->translate_file(base_path("lang"), $this->option('origin') ?? "en", $this->option('lang') ?? "es", $this->option('context') ?? "", $this->option('model') ?? "gpt-3.5-turbo");
+            $service->translate_file(base_path("lang"), $this->option('origin') ?? "en", $this->option('lang') ?? "es", $context, $model);
             $this->info("\File translated successfully");
             $this->info('Translation finished at ' . Carbon::now()->toDateTimeString());
         } catch (\Throwable $th) {
             $this->stopSpinner();
             $this->error($th->getMessage());
         }
-
     }
-
 }
