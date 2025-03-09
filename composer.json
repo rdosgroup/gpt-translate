@@ -28,7 +28,7 @@
   "extra": {
     "laravel": {
       "providers": [
-        "RdosgroupGptTranslate\\TranslateProvider"
+        "Rdosgroup\\GptTranslate\\TranslateProvider"
       ]
     }
   }
