@@ -19,11 +19,15 @@ abstract class Grammar
     protected $connection;
 
     /**
-     * The grammar table prefix.
+     * Create a new grammar instance.
      *
-     * @var string
+     * @param  \Illuminate\Database\Connection  $connection
+     * @return void
      */
-    protected $tablePrefix = '';
+    public function __construct(Connection $connection)
+    {
+        $this->connection = $connection;
+    }
 
     /**
      * Wrap an array of values.
@@ -33,40 +37,43 @@ abstract class Grammar
      */
     public function wrapArray(array $values)
     {
-        return array_map([$this, 'wrap'], $values);
+        return array_map($this->wrap(...), $values);
     }
 
     /**
      * Wrap a table in keyword identifiers.
      *
      * @param  \Illuminate\Contracts\Database\Query\Expression|string  $table
+     * @param  string|null  $prefix
      * @return string
      */
-    public function wrapTable($table)
+    public function wrapTable($table, $prefix = null)
     {
         if ($this->isExpression($table)) {
             return $this->getValue($table);
         }
 
+        $prefix ??= $this->connection->getTablePrefix();
+
         // If the table being wrapped has an alias we'll need to separate the pieces
         // so we can prefix the table and then wrap each of the segments on their
         // own and then join these both back together using the "as" connector.
         if (stripos($table, ' as ') !== false) {
-            return $this->wrapAliasedTable($table);
+            return $this->wrapAliasedTable($table, $prefix);
         }
 
         // If the table being wrapped has a custom schema name specified, we need to
         // prefix the last segment as the table name then wrap each segment alone
         // and eventually join them both back together using the dot connector.
         if (str_contains($table, '.')) {
-            $table = substr_replace($table, '.'.$this->tablePrefix, strrpos($table, '.'), 1);
+            $table = substr_replace($table, '.'.$prefix, strrpos($table, '.'), 1);
 
             return (new Collection(explode('.', $table)))
                 ->map($this->wrapValue(...))
                 ->implode('.');
         }
 
-        return $this->wrapValue($this->tablePrefix.$table);
+        return $this->wrapValue($prefix.$table);
     }
 
     /**
@@ -115,13 +122,16 @@ abstract class Grammar
      * Wrap a table that has an alias.
      *
      * @param  string  $value
+     * @param  string|null  $prefix
      * @return string
      */
-    protected function wrapAliasedTable($value)
+    protected function wrapAliasedTable($value, $prefix = null)
     {
         $segments = preg_split('/\s+as\s+/i', $value);
 
-        return $this->wrapTable($segments[0]).' as '.$this->wrapValue($this->tablePrefix.$segments[1]);
+        $prefix ??= $this->connection->getTablePrefix();
+
+        return $this->wrapTable($segments[0], $prefix).' as '.$this->wrapValue($prefix.$segments[1]);
     }
 
     /**
@@ -186,7 +196,7 @@ abstract class Grammar
      */
     public function columnize(array $columns)
     {
-        return implode(', ', array_map([$this, 'wrap'], $columns));
+        return implode(', ', array_map($this->wrap(...), $columns));
     }
 
     /**
@@ -197,7 +207,7 @@ abstract class Grammar
      */
     public function parameterize(array $values)
     {
-        return implode(', ', array_map([$this, 'parameter'], $values));
+        return implode(', ', array_map($this->parameter(...), $values));
     }
 
     /**
@@ -235,10 +245,6 @@ abstract class Grammar
      */
     public function escape($value, $binary = false)
     {
-        if (is_null($this->connection)) {
-            throw new RuntimeException("The database driver's grammar implementation does not support escaping values.");
-        }
-
         return $this->connection->escape($value, $binary);
     }
 
@@ -281,35 +287,26 @@ abstract class Grammar
     /**
      * Get the grammar's table prefix.
      *
+     * @deprecated Use DB::getTablePrefix()
+     *
      * @return string
      */
     public function getTablePrefix()
     {
-        return $this->tablePrefix;
+        return $this->connection->getTablePrefix();
     }
 
     /**
      * Set the grammar's table prefix.
+     *
+     * @deprecated Use DB::setTablePrefix()
      *
      * @param  string  $prefix
      * @return $this
      */
     public function setTablePrefix($prefix)
     {
-        $this->tablePrefix = $prefix;
-
-        return $this;
-    }
-
-    /**
-     * Set the grammar's database connection.
-     *
-     * @param  \Illuminate\Database\Connection  $connection
-     * @return $this
-     */
-    public function setConnection($connection)
-    {
-        $this->connection = $connection;
+        $this->connection->setTablePrefix($prefix);
 
         return $this;
     }

@@ -7,20 +7,13 @@ use Illuminate\Contracts\Database\Events\MigrationEvent;
 class NoPendingMigrations implements MigrationEvent
 {
     /**
-     * The migration method that was called.
-     *
-     * @var string
-     */
-    public $method;
-
-    /**
      * Create a new event instance.
      *
-     * @param  string  $method
+     * @param  string  $method  The migration method that was called.
      * @return void
      */
-    public function __construct($method)
-    {
-        $this->method = $method;
+    public function __construct(
+        public $method,
+    ) {
     }
 }

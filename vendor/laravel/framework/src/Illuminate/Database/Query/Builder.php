@@ -3142,7 +3142,7 @@ class Builder implements BuilderContract
      * @param  string  $pageName
      * @param  int|null  $page
      * @param  \Closure|int|null  $total
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     * @return \Illuminate\Pagination\LengthAwarePaginator
      */
     public function paginate($perPage = 15, $columns = ['*'], $pageName = 'page', $page = null, $total = null)
     {
@@ -4098,6 +4098,30 @@ class Builder implements BuilderContract
     }
 
     /**
+     * Get the "limit" value for the query or null if it's not set.
+     *
+     * @return mixed
+     */
+    public function getLimit()
+    {
+        $value = $this->unions ? $this->unionLimit : $this->limit;
+
+        return ! is_null($value) ? (int) $value : null;
+    }
+
+    /**
+     * Get the "offset" value for the query or null if it's not set.
+     *
+     * @return mixed
+     */
+    public function getOffset()
+    {
+        $value = $this->unions ? $this->unionOffset : $this->offset;
+
+        return ! is_null($value) ? (int) $value : null;
+    }
+
+    /**
      * Get the current query value bindings in a flattened array.
      *
      * @return array
@@ -4153,7 +4177,7 @@ class Builder implements BuilderContract
 
         if (is_array($value)) {
             $this->bindings[$type] = array_values(array_map(
-                [$this, 'castBinding'],
+                $this->castBinding(...),
                 array_merge($this->bindings[$type], $value),
             ));
         } else {
@@ -4201,7 +4225,7 @@ class Builder implements BuilderContract
             ->reject(function ($binding) {
                 return $binding instanceof ExpressionContract;
             })
-            ->map([$this, 'castBinding'])
+            ->map($this->castBinding(...))
             ->values()
             ->all();
     }

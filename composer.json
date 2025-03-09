@@ -22,7 +22,7 @@
     }
   },
   "require": {
-    "php": "^8.3",
-    "openai-php/laravel": "^0.10.2"
+    "php": "^8.3", 
+    "openai-php/laravel": "^0.11"
   }
 }

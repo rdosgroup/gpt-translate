@@ -9,12 +9,15 @@ use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\CircularDependencyException;
 use Illuminate\Contracts\Container\Container as ContainerContract;
 use Illuminate\Contracts\Container\ContextualAttribute;
+use Illuminate\Support\Collection;
 use LogicException;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionFunction;
+use ReflectionIntersectionType;
 use ReflectionParameter;
+use ReflectionUnionType;
 use TypeError;
 
 class Container implements ArrayAccess, ContainerContract
@@ -268,15 +271,22 @@ class Container implements ArrayAccess, ContainerContract
     /**
      * Register a binding with the container.
      *
-     * @param  string  $abstract
+     * @param  \Closure|string  $abstract
      * @param  \Closure|string|null  $concrete
      * @param  bool  $shared
      * @return void
      *
      * @throws \TypeError
+     * @throws ReflectionException
      */
     public function bind($abstract, $concrete = null, $shared = false)
     {
+        if ($abstract instanceof Closure) {
+            return $this->bindBasedOnClosureReturnTypes(
+                $abstract, $concrete, $shared
+            );
+        }
+
         $this->dropStaleInstances($abstract);
 
         // If no concrete type was given, we will simply set the concrete type to the
@@ -381,7 +391,7 @@ class Container implements ArrayAccess, ContainerContract
      * Add a contextual binding to the container.
      *
      * @param  string  $concrete
-     * @param  string  $abstract
+     * @param  \Closure|string  $abstract
      * @param  \Closure|string  $implementation
      * @return void
      */
@@ -393,7 +403,7 @@ class Container implements ArrayAccess, ContainerContract
     /**
      * Register a binding if it hasn't already been registered.
      *
-     * @param  string  $abstract
+     * @param  \Closure|string  $abstract
      * @param  \Closure|string|null  $concrete
      * @param  bool  $shared
      * @return void
@@ -408,7 +418,7 @@ class Container implements ArrayAccess, ContainerContract
     /**
      * Register a shared binding in the container.
      *
-     * @param  string  $abstract
+     * @param  \Closure|string  $abstract
      * @param  \Closure|string|null  $concrete
      * @return void
      */
@@ -420,7 +430,7 @@ class Container implements ArrayAccess, ContainerContract
     /**
      * Register a shared binding if it hasn't already been registered.
      *
-     * @param  string  $abstract
+     * @param  \Closure|string  $abstract
      * @param  \Closure|string|null  $concrete
      * @return void
      */
@@ -434,7 +444,7 @@ class Container implements ArrayAccess, ContainerContract
     /**
      * Register a scoped binding in the container.
      *
-     * @param  string  $abstract
+     * @param  \Closure|string  $abstract
      * @param  \Closure|string|null  $concrete
      * @return void
      */
@@ -448,7 +458,7 @@ class Container implements ArrayAccess, ContainerContract
     /**
      * Register a scoped binding if it hasn't already been registered.
      *
-     * @param  string  $abstract
+     * @param  \Closure|string  $abstract
      * @param  \Closure|string|null  $concrete
      * @return void
      */
@@ -457,6 +467,54 @@ class Container implements ArrayAccess, ContainerContract
         if (! $this->bound($abstract)) {
             $this->scoped($abstract, $concrete);
         }
+    }
+
+    /**
+     * Register a binding with the container based on the given Closure's return types.
+     *
+     * @param  \Closure|string  $abstract
+     * @param  \Closure|string|null  $concrete
+     * @param  bool  $shared
+     * @return void
+     */
+    protected function bindBasedOnClosureReturnTypes($abstract, $concrete = null, $shared = false)
+    {
+        $abstracts = $this->closureReturnTypes($abstract);
+
+        $concrete = $abstract;
+
+        foreach ($abstracts as $abstract) {
+            $this->bind($abstract, $concrete, $shared);
+        }
+    }
+
+    /**
+     * Get the class names / types of the return type of the given Closure.
+     *
+     * @param  \Closure  $closure
+     * @return list<class-string>
+     *
+     * @throws \ReflectionException
+     */
+    protected function closureReturnTypes(Closure $closure)
+    {
+        $reflection = new ReflectionFunction($closure);
+
+        if ($reflection->getReturnType() === null ||
+            $reflection->getReturnType() instanceof ReflectionIntersectionType) {
+            return [];
+        }
+
+        $types = $reflection->getReturnType() instanceof ReflectionUnionType
+            ? $reflection->getReturnType()->getTypes()
+            : [$reflection->getReturnType()];
+
+        return (new Collection($types))
+            ->reject(fn ($type) => $type->isBuiltin())
+            ->reject(fn ($type) => in_array($type->getName(), ['static', 'self']))
+            ->map(fn ($type) => $type->getName())
+            ->values()
+            ->all();
     }
 
     /**
@@ -1127,22 +1185,32 @@ class Container implements ArrayAccess, ContainerContract
      */
     protected function resolveClass(ReflectionParameter $parameter)
     {
+        $className = Util::getParameterClassName($parameter);
+
+        // First, we check if the dependency has been explicitly bound in the container
+        // and if so, we will resolve it directly from there to respect any explicit
+        // bindings the developer has defined rather than using any default value.
+        if ($this->bound($className)) {
+            return $this->make($className);
+        }
+
+        // If no binding exists, we will check if a default value has been defined for
+        // the parameter. If it has, we should return it to avoid overriding any of
+        // the developer specified default values for the constructor parameters.
+        if ($parameter->isDefaultValueAvailable()) {
+            return $parameter->getDefaultValue();
+        }
+
         try {
             return $parameter->isVariadic()
                         ? $this->resolveVariadicClass($parameter)
-                        : $this->make(Util::getParameterClassName($parameter));
+                        : $this->make($className);
         }
 
         // If we can not resolve the class instance, we will check to see if the value
-        // is optional, and if it is we will return the optional parameter value as
-        // the value of the dependency, similarly to how we do this with scalars.
+        // is variadic. If it is, we will return an empty array as the value of the
+        // dependency similarly to how we handle scalar values in this situation.
         catch (BindingResolutionException $e) {
-            if ($parameter->isDefaultValueAvailable()) {
-                array_pop($this->with);
-
-                return $parameter->getDefaultValue();
-            }
-
             if ($parameter->isVariadic()) {
                 array_pop($this->with);
 

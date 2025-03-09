@@ -597,7 +597,7 @@ class TestResponse implements ArrayAccess
     {
         $value = Arr::wrap($value);
 
-        $values = $escape ? array_map('e', $value) : $value;
+        $values = $escape ? array_map(e(...), $value) : $value;
 
         foreach ($values as $value) {
             PHPUnit::withResponse($this)->assertStringContainsString((string) $value, $this->getContent());
@@ -626,7 +626,7 @@ class TestResponse implements ArrayAccess
      */
     public function assertSeeInOrder(array $values, $escape = true)
     {
-        $values = $escape ? array_map('e', $values) : $values;
+        $values = $escape ? array_map(e(...), $values) : $values;
 
         PHPUnit::withResponse($this)->assertThat($values, new SeeInOrder($this->getContent()));
 
@@ -655,7 +655,7 @@ class TestResponse implements ArrayAccess
     {
         $value = Arr::wrap($value);
 
-        $values = $escape ? array_map('e', $value) : $value;
+        $values = $escape ? array_map(e(...), $value) : $value;
 
         $content = strip_tags($this->getContent());
 
@@ -675,7 +675,7 @@ class TestResponse implements ArrayAccess
      */
     public function assertSeeTextInOrder(array $values, $escape = true)
     {
-        $values = $escape ? array_map('e', $values) : $values;
+        $values = $escape ? array_map(e(...), $values) : $values;
 
         PHPUnit::withResponse($this)->assertThat($values, new SeeInOrder(strip_tags($this->getContent())));
 
@@ -693,7 +693,7 @@ class TestResponse implements ArrayAccess
     {
         $value = Arr::wrap($value);
 
-        $values = $escape ? array_map('e', $value) : $value;
+        $values = $escape ? array_map(e(...), $value) : $value;
 
         foreach ($values as $value) {
             PHPUnit::withResponse($this)->assertStringNotContainsString((string) $value, $this->getContent());
@@ -724,7 +724,7 @@ class TestResponse implements ArrayAccess
     {
         $value = Arr::wrap($value);
 
-        $values = $escape ? array_map('e', $value) : $value;
+        $values = $escape ? array_map(e(...), $value) : $value;
 
         $content = strip_tags($this->getContent());
 
@@ -974,6 +974,26 @@ class TestResponse implements ArrayAccess
         }
 
         return $this;
+    }
+
+    /**
+     * Assert that the response has the given JSON validation errors but does not have any other JSON validation errors.
+     *
+     * @param  string|array  $errors
+     * @param  string  $responseKey
+     * @return $this
+     */
+    public function assertOnlyJsonValidationErrors($errors, $responseKey = 'errors')
+    {
+        $this->assertJsonValidationErrors($errors, $responseKey);
+
+        $jsonErrors = Arr::get($this->json(), $responseKey) ?? [];
+
+        $expectedErrorKeys = collect($errors)->map(fn ($value, $key) => is_int($key) ? $value : $key)->all();
+
+        $unexpectedErrorKeys = Arr::except($jsonErrors, $expectedErrorKeys);
+
+        PHPUnit::withResponse($this)->assertTrue(count($unexpectedErrorKeys) === 0, 'Response has unexpected validation errors: '.collect($unexpectedErrorKeys)->keys()->map(fn ($key) => "'{$key}'")->join(', '));
     }
 
     /**
@@ -1354,6 +1374,37 @@ class TestResponse implements ArrayAccess
         }
 
         return $this;
+    }
+
+    /**
+     * Assert that the response has the given validation errors but does not have any other validation errors.
+     *
+     * @param  string|array|null  $errors
+     * @param  string  $errorBag
+     * @param  string  $responseKey
+     * @return $this
+     */
+    public function assertOnlyInvalid($errors = null, $errorBag = 'default', $responseKey = 'errors')
+    {
+        if ($this->baseResponse->headers->get('Content-Type') === 'application/json') {
+            return $this->assertOnlyJsonValidationErrors($errors, $responseKey);
+        }
+
+        $this->assertSessionHas('errors');
+
+        $sessionErrors = $this->session()->get('errors')
+            ->getBag($errorBag)
+            ->getMessages();
+
+        $expectedErrorKeys = collect($errors)
+            ->map(fn ($value, $key) => is_int($key) ? $value : $key)->all();
+
+        $unexpectedErrorKeys = Arr::except($sessionErrors, $expectedErrorKeys);
+
+        PHPUnit::withResponse($this)->assertTrue(
+            count($unexpectedErrorKeys) === 0,
+            'Response has unexpected validation errors: '.collect($unexpectedErrorKeys)->keys()->map(fn ($key) => "'{$key}'")->join(', ')
+        );
     }
 
     /**
